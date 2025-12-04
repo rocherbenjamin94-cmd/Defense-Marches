@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Search, Bell, Shield, User } from 'lucide-react';
 
 export default function Navbar() {
+    const pathname = usePathname();
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-navy-900 border-b border-navy-700 h-[70px]">
             <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-4">
@@ -31,9 +35,30 @@ export default function Navbar() {
                 {/* Nav & Actions (Right) */}
                 <div className="flex items-center gap-6 flex-shrink-0">
                     <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-400">
-                        <Link href="/" className="hover:text-white transition-colors">Marchés</Link>
-                        <Link href="/carte" className="hover:text-white transition-colors">Carte</Link>
-                        <Link href="/acheteurs" className="hover:text-white transition-colors">Acheteurs</Link>
+                        <Link
+                            href="/"
+                            className={`transition-colors ${pathname === '/' ? 'text-white' : 'hover:text-white'}`}
+                        >
+                            Marchés
+                        </Link>
+                        <Link
+                            href="/carte"
+                            className={`transition-colors ${pathname === '/carte' ? 'text-white' : 'hover:text-white'}`}
+                        >
+                            Carte
+                        </Link>
+                        <Link
+                            href="/acheteurs"
+                            className={`transition-colors ${pathname.startsWith('/acheteurs') ? 'text-white' : 'hover:text-white'}`}
+                        >
+                            Acheteurs
+                        </Link>
+                        <Link
+                            href="/repondre"
+                            className={`transition-colors ${pathname.startsWith('/repondre') ? 'text-white' : 'hover:text-white'}`}
+                        >
+                            Répondre
+                        </Link>
                         <Link href="#" className="hover:text-white transition-colors">Alertes</Link>
                         <Link href="#" className="hover:text-white transition-colors">Favoris</Link>
                         <Link href="#" className="hover:text-white transition-colors">Stats</Link>

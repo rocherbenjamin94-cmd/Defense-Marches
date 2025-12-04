@@ -99,8 +99,7 @@ export default function Dashboard() {
     }, [tenders]);
 
     return (
-        <div className="min-h-screen bg-[#0a0a0f] pb-20">
-            <Navbar />
+        <div className="min-h-screen bg-[#08080c] pb-20">
             <StatsBar
                 openCount={stats.openCount}
                 todayCount={stats.todayCount}
@@ -109,127 +108,130 @@ export default function Dashboard() {
                 lastSync={lastSync}
                 loading={loading}
             />
-            <FilterBar counts={counts} />
 
-            <div className="flex flex-col gap-8 pt-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <FilterBar counts={counts} />
 
-                {/* SECTION 1: TODAY (Top Priority) */}
-                {categories.justDropped.length > 0 && (
-                    <Section
-                        title="⚡ Publiés aujourd'hui"
-                        icon={<Zap className="h-5 w-5 text-gold-500" />}
-                        actionLabel="Voir tout"
-                        actionHref="/search?filter=today"
-                        scrollable
-                        className="!py-0"
-                    >
-                        {categories.justDropped.map(t => (
-                            <TenderCard key={t.id} tender={t} variant="standard" />
-                        ))}
-                    </Section>
-                )}
+                <div className="flex flex-col gap-8 pt-6">
 
-                {/* SECTION 2: STRATEGIC BUYERS (2 Columns) */}
-                <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                    {/* COL 1: ARMIES */}
-                    {categories.ministryArmies.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between border-b border-navy-700 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <Building2 className="h-5 w-5 text-gold-500" />
-                                    <h2 className="text-lg font-bold text-white">🎯 Ministère des Armées</h2>
-                                </div>
-                                <span className="text-xs text-gold-500 cursor-pointer hover:underline">Voir tout →</span>
-                            </div>
-                            <div className="space-y-3">
-                                {categories.ministryArmies.slice(0, 5).map(t => (
-                                    <TenderCard key={t.id} tender={t} variant="list-item" />
-                                ))}
-                            </div>
-                        </div>
+                    {/* SECTION 1: TODAY (Top Priority) */}
+                    {categories.justDropped.length > 0 && (
+                        <Section
+                            title="⚡ Publiés aujourd'hui"
+                            icon={<Zap className="h-5 w-5 text-gold-500" />}
+                            actionLabel="Voir tout"
+                            actionHref="/search?filter=today"
+                            scrollable
+                            className="!py-0"
+                        >
+                            {categories.justDropped.map(t => (
+                                <TenderCard key={t.id} tender={t} variant="standard" />
+                            ))}
+                        </Section>
                     )}
 
-                    {/* COL 2: INTERIOR */}
-                    {categories.interiorSecurity.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between border-b border-navy-700 pb-2">
-                                <div className="flex items-center gap-2">
-                                    <Shield className="h-5 w-5 text-blue-500" />
-                                    <h2 className="text-lg font-bold text-white">🛡️ Sécurité Intérieure</h2>
+                    {/* SECTION 2: STRATEGIC BUYERS (2 Columns) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                        {/* COL 1: ARMIES */}
+                        {categories.ministryArmies.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b border-navy-700 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Building2 className="h-5 w-5 text-gold-500" />
+                                        <h2 className="text-lg font-bold text-white">🎯 Ministère des Armées</h2>
+                                    </div>
+                                    <span className="text-xs text-gold-500 cursor-pointer hover:underline">Voir tout →</span>
                                 </div>
-                                <span className="text-xs text-gold-500 cursor-pointer hover:underline">Voir tout →</span>
+                                <div className="space-y-3">
+                                    {categories.ministryArmies.slice(0, 5).map(t => (
+                                        <TenderCard key={t.id} tender={t} variant="list-item" />
+                                    ))}
+                                </div>
                             </div>
-                            <div className="space-y-3">
-                                {categories.interiorSecurity.slice(0, 5).map(t => (
-                                    <TenderCard key={t.id} tender={t} variant="list-item" />
-                                ))}
+                        )}
+
+                        {/* COL 2: INTERIOR */}
+                        {categories.interiorSecurity.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b border-navy-700 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-5 w-5 text-blue-500" />
+                                        <h2 className="text-lg font-bold text-white">🛡️ Sécurité Intérieure</h2>
+                                    </div>
+                                    <span className="text-xs text-gold-500 cursor-pointer hover:underline">Voir tout →</span>
+                                </div>
+                                <div className="space-y-3">
+                                    {categories.interiorSecurity.slice(0, 5).map(t => (
+                                        <TenderCard key={t.id} tender={t} variant="list-item" />
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* SECTION 3: URGENTS */}
-                {categories.urgents.length > 0 && (
-                    <Section
-                        title="🔥 Fermeture imminente"
-                        icon={<Flame className="h-5 w-5 text-red-500" />}
-                        actionLabel="Voir tout"
-                        actionHref="/search?filter=urgent"
-                        scrollable
-                        className="!py-0"
-                    >
-                        {categories.urgents.map(t => (
-                            <TenderCard key={t.id} tender={t} variant="standard" />
-                        ))}
-                    </Section>
-                )}
-
-                {/* SECTION 4: HIGH VALUE */}
-                {categories.highValue.length > 0 && (
-                    <Section
-                        title="💰 À fort enjeu"
-                        icon={<TrendingUp className="h-5 w-5 text-green-500" />}
-                        scrollable
-                        className="!py-0"
-                    >
-                        {categories.highValue.map(t => (
-                            <TenderCard key={t.id} tender={t} variant="large" />
-                        ))}
-                    </Section>
-                )}
-
-                {/* SECTION 4: CYBER */}
-                {categories.cyber.length > 0 && (
-                    <Section
-                        title="🔒 Cybersécurité & Systèmes"
-                        icon={<Terminal className="h-5 w-5 text-purple-500" />}
-                        scrollable
-                        className="!py-0"
-                    >
-                        {categories.cyber.map(t => (
-                            <TenderCard key={t.id} tender={t} variant="standard" />
-                        ))}
-                    </Section>
-                )}
-
-                {/* SECTION 5: CATEGORIES */}
-                <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-                    <h2 className="text-lg font-bold text-white mb-6">Explorer par domaine</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                        {CATEGORIES.map(cat => (
-                            <CategoryCard
-                                key={cat.id}
-                                id={cat.id}
-                                name={cat.name}
-                                icon={cat.icon}
-                                count={cat.count}
-                            />
-                        ))}
+                        )}
                     </div>
-                </div>
 
-            </div>
+                    {/* SECTION 3: URGENTS */}
+                    {categories.urgents.length > 0 && (
+                        <Section
+                            title="🔥 Fermeture imminente"
+                            icon={<Flame className="h-5 w-5 text-red-500" />}
+                            actionLabel="Voir tout"
+                            actionHref="/search?filter=urgent"
+                            scrollable
+                            className="!py-0"
+                        >
+                            {categories.urgents.map(t => (
+                                <TenderCard key={t.id} tender={t} variant="standard" />
+                            ))}
+                        </Section>
+                    )}
+
+                    {/* SECTION 4: HIGH VALUE */}
+                    {categories.highValue.length > 0 && (
+                        <Section
+                            title="💰 À fort enjeu"
+                            icon={<TrendingUp className="h-5 w-5 text-green-500" />}
+                            scrollable
+                            className="!py-0"
+                        >
+                            {categories.highValue.map(t => (
+                                <TenderCard key={t.id} tender={t} variant="large" />
+                            ))}
+                        </Section>
+                    )}
+
+                    {/* SECTION 4: CYBER */}
+                    {categories.cyber.length > 0 && (
+                        <Section
+                            title="🔒 Cybersécurité & Systèmes"
+                            icon={<Terminal className="h-5 w-5 text-purple-500" />}
+                            scrollable
+                            className="!py-0"
+                        >
+                            {categories.cyber.map(t => (
+                                <TenderCard key={t.id} tender={t} variant="standard" />
+                            ))}
+                        </Section>
+                    )}
+
+                    {/* SECTION 5: CATEGORIES */}
+                    <div className="w-full">
+                        <h2 className="text-lg font-bold text-white mb-6">Explorer par domaine</h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                            {CATEGORIES.map(cat => (
+                                <CategoryCard
+                                    key={cat.id}
+                                    id={cat.id}
+                                    name={cat.name}
+                                    icon={cat.icon}
+                                    count={cat.count}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+            </main>
         </div>
     );
 }

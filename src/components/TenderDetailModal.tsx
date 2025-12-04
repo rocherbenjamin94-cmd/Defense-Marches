@@ -23,10 +23,6 @@ export default function TenderDetailModal({ tender, onClose }: TenderDetailModal
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
-    const handleReply = () => {
-        setShowToast(true);
-    };
-
     const daysLeft = Math.ceil((new Date(tender.deadlineDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     const isUrgent = tender.urgencyLevel === 'critical' || tender.urgencyLevel === 'urgent';
 
@@ -161,12 +157,12 @@ export default function TenderDetailModal({ tender, onClose }: TenderDetailModal
 
                     {/* Footer */}
                     <div className="px-10 py-6 border-t border-navy-700 bg-navy-900/95 backdrop-blur sticky bottom-0 z-10 md:rounded-b-2xl">
-                        <button
-                            onClick={handleReply}
+                        <a
+                            href={`/repondre/dc1?marcheId=${tender.id}&acheteur=${encodeURIComponent(tender.buyer.name)}&objet=${encodeURIComponent(tender.title)}&dateLimite=${tender.deadlineDate}`}
                             className="w-full flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold py-3.5 rounded-lg transition-colors mb-3"
                         >
                             Répondre à cet AO <ChevronRight className="h-5 w-5" />
-                        </button>
+                        </a>
                         <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
                             <Lock className="h-3 w-3" />
                             Génération automatique DC1/DC2 — Bientôt disponible

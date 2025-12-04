@@ -44,8 +44,8 @@ export default function Section({
                 )}
             </div>
 
-            <div className={scrollable ? "overflow-x-auto pb-6 hide-scrollbar snap-x snap-mandatory overflow-y-visible" : ""}>
-                <div className={scrollable ? "flex gap-4 px-4 sm:px-6 lg:px-8 min-w-max h-full items-stretch" : "max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8"}>
+            <div className={scrollable ? "overflow-x-auto pb-6 hide-scrollbar snap-x snap-mandatory overflow-y-visible -mx-4 px-4" : ""}>
+                <div className={scrollable ? "flex gap-4 min-w-max h-full items-stretch" : ""}>
                     {scrollable ? (
                         React.Children.map(children, child => (
                             <div className="snap-start">
