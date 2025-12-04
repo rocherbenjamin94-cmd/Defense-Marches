@@ -20,24 +20,29 @@ export const metadata: Metadata = {
   description: "Plateforme de veille stratégique des marchés publics de défense et sécurité.",
 };
 
+import { ClerkProvider } from '@clerk/nextjs'
+import { frFR } from '@clerk/localizations'
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
-      >
-        <ModalProvider>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-        </ModalProvider>
-      </body>
-    </html>
+    <ClerkProvider localization={frFR}>
+      <html lang="fr">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
+        >
+          <ModalProvider>
+            <Navbar />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </ModalProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

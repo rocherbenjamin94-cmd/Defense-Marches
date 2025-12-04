@@ -10,6 +10,8 @@
     "start:backend": "cd backend-dc1 && npm install && npm run start:dev"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.29.0",
+    "@clerk/nextjs": "^6.35.6",
     "@hookform/resolvers": "^5.2.2",
     "@types/leaflet": "^1.9.21",
     "axios": "^1.13.2",

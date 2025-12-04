@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Bell, Shield, User } from 'lucide-react';
+import { UserButton, SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 
 export default function Navbar() {
     const pathname = usePathname();
@@ -67,12 +68,27 @@ export default function Navbar() {
                     <div className="h-8 w-[1px] bg-navy-700 hidden lg:block"></div>
 
                     <div className="flex items-center gap-3">
-                        <button className="hidden sm:block px-4 py-2 text-sm font-medium text-white border border-navy-600 rounded-lg hover:bg-navy-800 transition-colors">
-                            Connexion
-                        </button>
-                        <button className="px-4 py-2 text-sm font-bold text-navy-900 bg-gold-500 rounded-lg hover:bg-gold-400 transition-colors">
-                            Inscription
-                        </button>
+                        <SignedOut>
+                            <SignInButton mode="modal">
+                                <button className="hidden sm:block px-4 py-2 text-sm font-medium text-white border border-navy-600 rounded-lg hover:bg-navy-800 transition-colors">
+                                    Connexion
+                                </button>
+                            </SignInButton>
+                            <SignUpButton mode="modal">
+                                <button className="px-4 py-2 text-sm font-bold text-navy-900 bg-gold-500 rounded-lg hover:bg-gold-400 transition-colors">
+                                    Inscription
+                                </button>
+                            </SignUpButton>
+                        </SignedOut>
+                        <SignedIn>
+                            <UserButton
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "h-9 w-9"
+                                    }
+                                }}
+                            />
+                        </SignedIn>
                     </div>
                 </div>
             </div>
