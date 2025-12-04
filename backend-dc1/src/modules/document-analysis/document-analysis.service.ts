@@ -7,7 +7,7 @@ import {
   DocumentExtractionToolInput,
 } from './tools/document-extraction.tool';
 import { ExtractedDocumentData } from './dto';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseService } from '../cache/database.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';

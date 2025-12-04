@@ -10,7 +10,7 @@ import {
 import { EntrepriseService } from './entreprise.service';
 import { LookupQueryDto, DirectLookupQueryDto } from './dto';
 import { SiretValidationPipe } from '../../common/pipes/siret-validation.pipe';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseService } from '../cache/database.service';
 import { PappersService } from '../pappers/pappers.service';
 
 @Controller('api/entreprise')
@@ -19,7 +19,7 @@ export class EntrepriseController {
     private entrepriseService: EntrepriseService,
     private databaseService: DatabaseService,
     private pappersService: PappersService,
-  ) {}
+  ) { }
 
   @Get('lookup')
   async lookup(@Query() query: LookupQueryDto) {

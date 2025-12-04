@@ -1,8 +1,8 @@
 import { Injectable, HttpException, HttpStatus, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CacheService } from '../cache/cache.service';
-import { DatabaseService } from '../database/database.service';
-import type { EntrepriseInput, EntrepriseRecord } from '../database/database.types';
+import { DatabaseService } from '../cache/database.service';
+import type { EntrepriseInput, EntrepriseRecord } from '../cache/database.types';
 import {
   PappersResponse,
   PappersSearchResponse,

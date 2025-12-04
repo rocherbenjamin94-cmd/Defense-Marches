@@ -4,7 +4,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 import { CacheModule } from './modules/cache/cache.module';
-import { DatabaseModule } from './modules/database/database.module';
 import { PappersModule } from './modules/pappers/pappers.module';
 import { ClaudeModule } from './modules/claude/claude.module';
 import { EntrepriseModule } from './modules/entreprise/entreprise.module';
@@ -27,7 +26,6 @@ import { AppService } from './app.service';
       },
     ]),
     CacheModule,
-    DatabaseModule,
     PappersModule,
     ClaudeModule,
     EntrepriseModule,
