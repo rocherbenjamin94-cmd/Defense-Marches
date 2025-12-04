@@ -2,7 +2,7 @@ export default () => ({
   port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173,https://defense-marches.vercel.app',
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || '',

@@ -9,10 +9,14 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // CORS
+  const corsOrigin = configService.get<string>('cors.origin');
+  const origin = corsOrigin.includes(',') ? corsOrigin.split(',') : corsOrigin;
+
   app.enableCors({
-    origin: configService.get<string>('cors.origin'),
+    origin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
 
   // Global validation pipe
