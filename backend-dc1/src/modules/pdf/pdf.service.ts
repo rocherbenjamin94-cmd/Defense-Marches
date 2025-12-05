@@ -6,11 +6,17 @@ import { generateDC2Html } from './templates/dc2.template';
 
 @Injectable()
 export class PdfService {
-  async generatePDF(formData: DC1FormData): Promise<Buffer> {
-    const browser = await puppeteer.launch({
+  private getLaunchOptions() {
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    return {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      ...(executablePath ? { executablePath } : {}),
+    };
+  }
+
+  async generatePDF(formData: DC1FormData): Promise<Buffer> {
+    const browser = await puppeteer.launch(this.getLaunchOptions());
 
     try {
       const page = await browser.newPage();
@@ -36,10 +42,7 @@ export class PdfService {
   }
 
   async generateDC2PDF(formData: DC2FormData): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    const browser = await puppeteer.launch(this.getLaunchOptions());
 
     try {
       const page = await browser.newPage();
