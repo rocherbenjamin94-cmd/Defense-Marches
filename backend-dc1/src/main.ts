@@ -12,10 +12,17 @@ async function bootstrap() {
   const corsOrigin = configService.get<string>('cors.origin') || '';
   const defaultOrigins = ['http://localhost:5173', 'https://defense-marches.vercel.app'];
   const envOrigins = corsOrigin.split(',').filter(o => o.length > 0);
-  const origin = [...new Set([...defaultOrigins, ...envOrigins])];
+  const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
   app.enableCors({
-    origin,
+    origin: (requestOrigin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+        callback(null, true);
+      } else {
+        console.warn(`Blocked CORS request from origin: ${requestOrigin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
