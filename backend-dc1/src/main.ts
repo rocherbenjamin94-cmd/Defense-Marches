@@ -16,7 +16,12 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (requestOrigin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+      const isAllowed =
+        !requestOrigin ||
+        allowedOrigins.includes(requestOrigin) ||
+        requestOrigin.endsWith('.vercel.app'); // Allow all Vercel preview deployments
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         console.warn(`Blocked CORS request from origin: ${requestOrigin}`);
