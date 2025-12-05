@@ -10,7 +10,9 @@ async function bootstrap() {
 
   // CORS
   const corsOrigin = configService.get<string>('cors.origin') || '';
-  const origin = corsOrigin.includes(',') ? corsOrigin.split(',') : corsOrigin;
+  const defaultOrigins = ['http://localhost:5173', 'https://defense-marches.vercel.app'];
+  const envOrigins = corsOrigin.split(',').filter(o => o.length > 0);
+  const origin = [...new Set([...defaultOrigins, ...envOrigins])];
 
   app.enableCors({
     origin,
