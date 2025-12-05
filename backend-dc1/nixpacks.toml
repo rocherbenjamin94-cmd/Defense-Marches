@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "python3", "chromium", "nss", "freetype", "fontconfig", "pango", "cairo", "glib", "gtk3", "dbus", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "expat", "cups", "libdrm", "mesa", "alsa-lib", "at-spi2-atk", "at-spi2-core", "libxkbcommon"]
+aptPkgs = ["chromium", "fonts-liberation", "libasound2", "libatk-bridge2.0-0", "libatk1.0-0", "libcups2", "libdbus-1-3", "libdrm2", "libgbm1", "libgtk-3-0", "libnspr4", "libnss3", "libx11-xcb1", "libxcomposite1", "libxdamage1", "libxfixes3", "libxrandr2", "libxshmfence1", "xdg-utils"]
 
 [phases.install]
 cmds = ["npm install --legacy-peer-deps"]
@@ -9,7 +9,7 @@ cmds = ["npm run build"]
 
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
-PUPPETEER_EXECUTABLE_PATH = "/nix/store/chromium/bin/chromium"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
 
 [start]
 cmd = "node dist/main.js"
