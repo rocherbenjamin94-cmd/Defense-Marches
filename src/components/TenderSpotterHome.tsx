@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Radio, PlusCircle, Clock, Map as MapIcon, Sparkles, ChevronRight, AlertCircle, Twitter, Linkedin, Building2, Flame, TrendingUp, Terminal, Shield, Anchor, Plane, Lock, BadgeCheck, Truck, Wrench, Package, Home, X, Check } from 'lucide-react';
+import { Search, Radio, PlusCircle, Clock, Map as MapIcon, Sparkles, ChevronRight, AlertCircle, Twitter, Linkedin, Building2, Flame, TrendingUp, Terminal, Shield, Anchor, Plane, Lock, BadgeCheck, Truck, Wrench, Package, Home, X, Check, FileText } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 
@@ -109,11 +109,11 @@ export default function TenderSpotterHome() {
     }, [categories, filteredTenders]);
 
     return (
-        <div className="min-h-screen bg-[#0B0D11] text-[#94A3B8] font-sans selection:bg-blue-900/50 selection:text-blue-200">
+        <div className="min-h-screen bg-[var(--bg-body)] text-slate-600 dark:text-[#94A3B8] font-sans selection:bg-blue-500/20 selection:text-blue-600 dark:selection:bg-blue-900/50 dark:selection:text-blue-200">
 
             {/* Background Ambience */}
-            <div className="fixed inset-0 grid-pattern pointer-events-none z-0"></div>
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[500px] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
+            <div className="fixed inset-0 grid-pattern pointer-events-none z-0 opacity-50 dark:opacity-100"></div>
+            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[500px] bg-blue-500/5 dark:bg-blue-900/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
 
             {/* Main Content */}
             <main className="pt-24 pb-20 relative min-h-screen z-10">
@@ -132,21 +132,21 @@ export default function TenderSpotterHome() {
                         <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,rgba(59,130,246,0.3)_0deg,transparent_60deg,transparent_360deg)] rotate-[-45deg] rounded-full"></div>
                     </div>
 
-                    <h1 className="text-4xl md:text-6xl font-semibold text-white tracking-tight mb-6 leading-[1.1]">
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-slate-400">TENDERSPOTTER</span> <br />
+                    <h1 className="text-4xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight mb-6 leading-[1.1]">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-slate-400">TENDERSPOTTER</span> <br />
                         Le radar des opportunités <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-slate-400">du secteur défense.</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-slate-400">du secteur défense.</span>
                     </h1>
 
-                    <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-10 font-light">
+                    <p className="text-slate-600 dark:text-slate-400 text-lg max-w-2xl mx-auto mb-10 font-light">
                         Centralisez, analysez et répondez aux appels d'offres du Ministère des Armées, de la DGA et des acteurs de la sécurité intérieure.
                     </p>
 
                     {/* Search Bar Component */}
                     <div className="relative max-w-2xl mx-auto group">
                         <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                        <div className="relative bg-[#14181F] border border-white/10 rounded-lg p-2 flex items-center shadow-2xl">
-                            <div className="pl-4 text-slate-500">
+                        <div className="relative bg-white dark:bg-[#14181F] border border-slate-200 dark:border-white/10 rounded-lg p-2 flex items-center shadow-2xl shadow-slate-200/50 dark:shadow-black/50">
+                            <div className="pl-4 text-slate-400 dark:text-slate-500">
                                 <Search className="w-5 h-5" />
                             </div>
                             <input
@@ -154,24 +154,30 @@ export default function TenderSpotterHome() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Rechercher : drones, cybersécurité, uniformes, blindés..."
-                                className="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 px-4 py-3 text-sm focus:outline-none"
+                                className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 px-4 py-3 text-sm focus:outline-none"
                             />
 
                             <div className="flex items-center gap-2">
-
                                 <button
                                     onClick={() => setIsScanModalOpen(true)}
-                                    className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-cyan-500 hover:brightness-110 text-white px-4 py-2 rounded-md text-sm font-medium transition-all shadow-lg shadow-blue-900/20 border border-white/10 flex items-center gap-2 group whitespace-nowrap"
+                                    className="px-4 py-2 text-sm font-semibold rounded-lg btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105 whitespace-nowrap"
                                 >
-                                    {/* Shimmer Effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full h-full animate-shimmer"></div>
-
-                                    <Sparkles className="w-4 h-4 relative z-10" />
-                                    <span className="relative z-10">Scan IA</span>
-                                    <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded ml-1 relative z-10 font-bold tracking-wide">BETA</span>
+                                    <Sparkles className="w-4 h-4" />
+                                    Scan IA
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded">BETA</span>
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Répondre Button Below Search */}
+                    <div className="flex justify-center mt-6">
+                        <Link href="/repondre">
+                            <button className="px-4 py-2 text-sm font-semibold rounded-lg btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105">
+                                <FileText className="w-5 h-5" />
+                                <span>Répondre à un appel d'offres</span>
+                            </button>
+                        </Link>
                     </div>
 
                     {/* AI Scan Modal */}
@@ -184,7 +190,7 @@ export default function TenderSpotterHome() {
                             ></div>
 
                             {/* Modal Content */}
-                            <div className="relative bg-[#14181F] border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                            <div className="relative bg-white dark:bg-[#14181F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
                                 {/* Close Button */}
                                 <button
                                     onClick={() => setIsScanModalOpen(false)}
@@ -198,8 +204,8 @@ export default function TenderSpotterHome() {
                                     <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
                                         <Sparkles className="w-8 h-8 text-blue-400" />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-white mb-2">Scan Intelligent IA</h2>
-                                    <p className="text-sm text-slate-400">
+                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Scan Intelligent IA</h2>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">
                                         Notre IA analyse votre profil entreprise et trouve automatiquement les marchés où vous avez le plus de chances de gagner.
                                     </p>
                                 </div>
@@ -235,24 +241,24 @@ export default function TenderSpotterHome() {
                     {/* Real-time Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto mb-16">
                         {/* Card 1 : Marchés ouverts */}
-                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
-                            <div className="text-4xl font-bold text-white tracking-tight">{stats.openCount}</div>
+                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                            <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.openCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <Radio className="w-4 h-4 text-emerald-500" /> Marchés ouverts
                             </div>
                         </div>
 
                         {/* Card 2 : Publiés ce jour */}
-                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
-                            <div className="text-4xl font-bold text-white tracking-tight">{stats.todayCount}</div>
+                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                            <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.todayCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <PlusCircle className="w-4 h-4 text-blue-500" /> Publiés ce jour
                             </div>
                         </div>
 
                         {/* Card 3 : Clôture bientôt */}
-                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
-                            <div className="text-4xl font-bold text-white tracking-tight">{stats.closingCount}</div>
+                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                            <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.closingCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <Clock className="w-4 h-4 text-orange-500" /> Clôture &lt; 7 jours
                             </div>
@@ -266,9 +272,9 @@ export default function TenderSpotterHome() {
                     <div>
                         {/* Titre + badge */}
                         <div className="flex items-center gap-3 mb-4">
-                            <h2 className="text-xl font-semibold text-white">Publiés aujourd'hui</h2>
-                            <span className="bg-slate-700 text-xs px-2 py-1 rounded text-gray-300">{filteredTenders.length}</span>
-                            <a href="#" className="ml-auto text-blue-400 hover:text-blue-300 text-sm">Voir tout &gt;</a>
+                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Publiés aujourd'hui</h2>
+                            <span className="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-1 rounded text-slate-700 dark:text-gray-300">{filteredTenders.length}</span>
+                            <a href="#" className="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 text-sm">Voir tout &gt;</a>
                         </div>
 
                         {/* Filtres catégories */}
@@ -304,34 +310,34 @@ export default function TenderSpotterHome() {
                                 const CategoryIcon = getTenderIcon(tender.title);
 
                                 return (
-                                    <div key={tender.id} className="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                                    <div key={tender.id} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px] shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-blue-500/30">
                                         <div>
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center border border-white/10 group-hover:border-blue-500/30 transition-colors">
-                                                        <CategoryIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                                    <div className="w-10 h-10 rounded bg-gray-100 dark:bg-slate-700 flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:border-blue-500/30 transition-colors">
+                                                        <CategoryIcon className="w-5 h-5 text-gray-500 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                                                     </div>
-                                                    <div className="text-xs text-slate-400 line-clamp-1">{tender.buyer.name}</div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{tender.buyer.name}</div>
                                                 </div>
                                                 {isUrgent ? (
-                                                    <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-semibold tracking-wide">URGENT</span>
+                                                    <span className="px-2 py-1 rounded bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/20 text-[10px] font-semibold tracking-wide">URGENT</span>
                                                 ) : (
-                                                    <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
+                                                    <span className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
                                                 )}
                                             </div>
-                                            <h3 className="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors line-clamp-3">
+                                            <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-3">
                                                 {tender.title}
                                             </h3>
                                             <div className="flex gap-2 mb-4">
                                                 {/* Tags Mockup based on text analysis or generic */}
-                                                <span className="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded line-clamp-1 max-w-[100px]">{tender.cpv || "Marché Public"}</span>
+                                                <span className="text-[10px] text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/5 px-1.5 py-0.5 rounded line-clamp-1 max-w-[100px]">{tender.cpv || "Marché Public"}</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                                            <div className="text-[11px] text-slate-500">
-                                                Lieu: <span className="text-slate-300">{tender.location || "France"}</span>
+                                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/5">
+                                            <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                Lieu: <span className="text-gray-700 dark:text-gray-300">{tender.location || "France"}</span>
                                             </div>
-                                            <div className={`text-[11px] flex items-center gap-1 font-medium ${isUrgent ? 'text-orange-400' : 'text-slate-400'}`}>
+                                            <div className={`text-[11px] flex items-center gap-1 font-medium ${isUrgent ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {isUrgent ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                                 {daysLeft !== null ? `${daysLeft}j` : 'N/A'}
                                             </div>
@@ -350,20 +356,20 @@ export default function TenderSpotterHome() {
 
                 {/* Bento Grid / Feature Highlights */}
                 <section className="max-w-[1400px] mx-auto px-6 mb-16">
-                    <h2 className="text-xl font-medium text-white tracking-tight mb-6">Intelligence Marché</h2>
+                    <h2 className="text-xl font-medium text-slate-900 dark:text-white tracking-tight mb-6">Intelligence Marché</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[400px]">
 
                         {/* Map Feature */}
-                        <div className="md:col-span-2 bg-[#14181F] rounded-2xl border border-white/5 p-6 relative overflow-hidden group flex flex-col">
-                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent"></div>
+                        <div className="md:col-span-2 bg-white dark:bg-[#14181F] rounded-2xl border border-slate-200 dark:border-white/5 p-6 relative overflow-hidden group flex flex-col shadow-sm dark:shadow-none transition-colors">
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/10 dark:via-transparent dark:to-transparent"></div>
                             <div className="relative z-10 flex flex-col h-full pointer-events-none">
                                 <div className="flex items-center justify-between mb-4 pointer-events-auto">
-                                    <div className="flex items-center gap-2 text-white font-medium">
+                                    <div className="flex items-center gap-2 text-slate-900 dark:text-white font-medium">
                                         <MapIcon className="w-4 h-4 text-blue-500" /> Cartographie
                                     </div>
-                                    <button className="text-xs text-slate-500 hover:text-white transition-colors">Agrandir</button>
+                                    <button className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">Agrandir</button>
                                 </div>
-                                <p className="text-sm text-slate-400 mb-4 max-w-sm">Visualisez géographiquement les marchés pour optimiser votre logistique et identifier les clusters régionaux.</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 max-w-sm">Visualisez géographiquement les marchés pour optimiser votre logistique et identifier les clusters régionaux.</p>
 
                                 {/* France Map Visual */}
                                 <div className="flex-1 rounded-lg relative overflow-hidden flex items-center justify-center -m-1 pointer-events-auto">
@@ -373,9 +379,9 @@ export default function TenderSpotterHome() {
                         </div>
 
                         {/* Smart Search Feature */}
-                        <div className="bg-[#14181F] rounded-2xl border border-white/5 p-6 relative overflow-hidden flex flex-col h-full">
+                        <div className="bg-white dark:bg-[#14181F] rounded-2xl border border-slate-200 dark:border-white/5 p-6 relative overflow-hidden flex flex-col h-full shadow-sm dark:shadow-none transition-colors">
                             <div className="relative z-10 flex flex-col h-full">
-                                <div className="flex items-center gap-2 text-white font-medium mb-2">
+                                <div className="flex items-center gap-2 text-slate-900 dark:text-white font-medium mb-2">
                                     <Sparkles className="w-4 h-4 text-blue-500" /> Recherche Intelligente
                                 </div>
                                 <p className="text-sm text-slate-400 mb-2">Notre IA analyse votre profil et calcule votre compatibilité avec chaque marché.</p>
@@ -431,9 +437,9 @@ export default function TenderSpotterHome() {
                     (categories.ministryArmies.length > 0) && (
                         <section className="max-w-[1400px] mx-auto px-6 mb-20">
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-medium text-white tracking-tight flex items-center gap-2">
+                                <h2 className="text-xl font-medium text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                                     Ministère des Armées
-                                    <span className="text-xs font-normal text-slate-500 border border-white/10 px-2 py-0.5 rounded ml-2">Focus</span>
+                                    <span className="text-xs font-normal text-slate-500 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded ml-2">Focus</span>
                                 </h2>
                             </div>
 
@@ -442,26 +448,26 @@ export default function TenderSpotterHome() {
                                     const daysLeft = getDaysRemaining(tender.deadlineDate);
                                     const CategoryIcon = getTenderIcon(tender.title);
                                     return (
-                                        <div key={tender.id} className="group bg-[#14181F] border border-white/5 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:border-slate-600 transition-colors cursor-pointer">
+                                        <div key={tender.id} className="group bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between shadow-sm dark:shadow-none hover:border-blue-500 dark:hover:border-slate-600 transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4 mb-3 md:mb-0">
-                                                <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center border border-white/10 group-hover:border-blue-500/30 transition-colors shrink-0">
-                                                    <CategoryIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                                <div className="w-10 h-10 rounded bg-gray-100 dark:bg-slate-700 flex items-center justify-center border border-gray-200 dark:border-white/10 group-hover:border-blue-500/30 transition-colors shrink-0">
+                                                    <CategoryIcon className="w-5 h-5 text-gray-500 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors line-clamp-1">
+                                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
                                                         {tender.title}
                                                     </h3>
-                                                    <div className="text-xs text-slate-500 mt-1">{tender.buyer.name} • {tender.location || 'France'}</div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{tender.buyer.name} • {tender.location || 'France'}</div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
                                                 <div className="flex gap-2">
-                                                    <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Défense</span>
+                                                    <span className="text-[10px] bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded">Défense</span>
                                                 </div>
                                                 {daysLeft !== null && (
                                                     <div className={`text-xs font-medium px-3 py-1 rounded border overflow-hidden ${daysLeft < 15
-                                                        ? "bg-orange-600/20 text-orange-300 border-orange-500/20"
-                                                        : "bg-blue-600/20 text-blue-300 border-blue-500/20"
+                                                        ? "bg-orange-100 dark:bg-orange-600/20 text-orange-600 dark:text-orange-300 border-orange-200 dark:border-orange-500/20"
+                                                        : "bg-blue-100 dark:bg-blue-600/20 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-500/20"
                                                         }`}>
                                                         {daysLeft}j restants
                                                     </div>
@@ -476,19 +482,19 @@ export default function TenderSpotterHome() {
                 }
 
                 {/* CTA / Footer Area */}
-                <section className="border-t border-white/5 bg-[#0B0D11]">
+                <section className="border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#0B0D11] transition-colors">
                     <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-                        <h2 className="text-3xl font-medium text-white tracking-tight mb-4">Ne manquez plus aucun appel d'offre stratégique.</h2>
-                        <p className="text-slate-400 mb-8 max-w-lg mx-auto">Créez votre profil TenderSpotter, configurez vos alertes mots-clés et recevez les marchés pertinents chaque matin.</p>
+                        <h2 className="text-3xl font-medium text-slate-900 dark:text-white tracking-tight mb-4">Ne manquez plus aucun appel d'offre stratégique.</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">Créez votre profil TenderSpotter, configurez vos alertes mots-clés et recevez les marchés pertinents chaque matin.</p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <button className="bg-white text-black px-6 py-3 rounded-md text-sm font-bold hover:bg-slate-200 transition-colors">
+                            <button className="bg-slate-900 dark:bg-white text-white dark:text-black px-6 py-3 rounded-md text-sm font-bold hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors">
                                 Commencer l'essai gratuit
                             </button>
-                            <button className="bg-transparent border border-white/10 text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-white/5 transition-colors">
+                            <button className="bg-transparent border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                                 Voir la démo
                             </button>
                         </div>
-                        <p className="text-[10px] text-slate-600 mt-6">Aucune carte bancaire requise. 14 jours d'essai offert.</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-6">Aucune carte bancaire requise. 14 jours d'essai offert.</p>
                     </div>
                 </section>
 

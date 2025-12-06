@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ModalProvider } from "@/components/ModalProvider";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,17 +31,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider localization={frFR}>
-      <html lang="fr">
+      <html lang="fr" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 flex flex-col min-h-screen`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--bg-body)] text-[var(--foreground)] flex flex-col min-h-screen transition-colors duration-300`}
         >
-          <ModalProvider>
-            <Navbar />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </ModalProvider>
+          <ThemeProvider>
+            <ModalProvider>
+              <Navbar />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </ModalProvider>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
