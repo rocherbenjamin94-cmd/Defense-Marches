@@ -78,29 +78,29 @@ export default function InteractiveMap({ activeFilter, onBuyerSelect, mapCenter,
     );
 
     return (
-        <div className="w-full h-full rounded-3xl overflow-hidden border border-navy-700 shadow-2xl relative z-0">
+        <div className="w-full h-full rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative z-0">
             <style jsx global>{`
                 @keyframes pulse {
-                    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+                    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
                     70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
                     100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
                 }
                 .leaflet-popup-content-wrapper {
-                    background: #1a1a24;
+                    background: #14181F;
                     color: white;
-                    border: 1px solid #2a2a34;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                 }
                 .leaflet-popup-tip {
-                    background: #1a1a24;
-                    border: 1px solid #2a2a34;
+                    background: #14181F;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }
             `}</style>
 
             <MapContainer
                 center={[46.5, 2.5]}
                 zoom={5.5}
-                className="w-full h-full bg-[#1a1a24]"
+                className="w-full h-full bg-[#0B0D11]"
                 minZoom={4}
                 maxZoom={15}
             >
@@ -126,7 +126,7 @@ export default function InteractiveMap({ activeFilter, onBuyerSelect, mapCenter,
                                 <div className="text-xs text-gray-400 flex items-center gap-1 mb-1">
                                     <span className="truncate">📍 {buyer.adresse} ({buyer.departement})</span>
                                 </div>
-                                <div className="text-xs font-medium text-gold-500">
+                                <div className="text-xs font-medium text-blue-400">
                                     📋 {buyer.activeTenders} marchés actifs
                                 </div>
                             </div>

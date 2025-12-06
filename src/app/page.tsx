@@ -1,10 +1,7 @@
-import Dashboard from "@/components/Dashboard";
-import { FilterProvider } from "@/components/FilterProvider";
+import TenderSpotterHome from "@/components/TenderSpotterHome";
 
 export default function Home() {
   return (
-    <FilterProvider>
-      <Dashboard />
-    </FilterProvider>
+    <TenderSpotterHome />
   );
 }

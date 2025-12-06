@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Navbar from '@/components/Navbar';
 import BuyerCard from '@/components/BuyerCard';
 import { BUYERS_LOCATIONS } from '@/lib/buyers';
 import { Search, Filter } from 'lucide-react';
@@ -28,7 +27,7 @@ export default function BuyersPage() {
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-gray-100 font-sans selection:bg-gold-500/30">
-            <Navbar />
+            {/* Navbar handled by layout */}
 
             <main className="pt-[70px] pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
