@@ -233,23 +233,28 @@ export default function TenderSpotterHome() {
                     )}
 
                     {/* Real-time Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto">
-                        <div className="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
-                            <div className="text-2xl font-semibold text-white tracking-tight">{stats.openCount}</div>
-                            <div className="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
-                                <Radio className="w-3 h-3 text-emerald-500" /> Marchés ouverts
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto mb-16">
+                        {/* Card 1 : Marchés ouverts */}
+                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
+                            <div className="text-4xl font-bold text-white tracking-tight">{stats.openCount}</div>
+                            <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
+                                <Radio className="w-4 h-4 text-emerald-500" /> Marchés ouverts
                             </div>
                         </div>
-                        <div className="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
-                            <div className="text-2xl font-semibold text-white tracking-tight">{stats.todayCount}</div>
-                            <div className="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
-                                <PlusCircle className="w-3 h-3 text-blue-500" /> Publiés ce jour
+
+                        {/* Card 2 : Publiés ce jour */}
+                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
+                            <div className="text-4xl font-bold text-white tracking-tight">{stats.todayCount}</div>
+                            <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
+                                <PlusCircle className="w-4 h-4 text-blue-500" /> Publiés ce jour
                             </div>
                         </div>
-                        <div className="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
-                            <div className="text-2xl font-semibold text-white tracking-tight">{stats.closingCount}</div>
-                            <div className="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
-                                <Clock className="w-3 h-3 text-orange-500" /> Clôture &lt; 7 jours
+
+                        {/* Card 3 : Clôture bientôt */}
+                        <div className="bg-[#14181F]/50 border border-white/5 p-6 rounded-xl backdrop-blur-sm text-center">
+                            <div className="text-4xl font-bold text-white tracking-tight">{stats.closingCount}</div>
+                            <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
+                                <Clock className="w-4 h-4 text-orange-500" /> Clôture &lt; 7 jours
                             </div>
                         </div>
                     </div>
@@ -257,83 +262,89 @@ export default function TenderSpotterHome() {
 
                 {/* Section 1: Publiés Aujourd'hui (Using filtered data or Just Dropped) */}
                 <section className="max-w-[1400px] mx-auto px-6 mb-16">
-                    <div className="flex items-center gap-3 mb-4">
-                        <h2 className="text-xl font-medium text-white tracking-tight">Publiés aujourd'hui</h2>
-                        <span className="bg-slate-800 text-xs px-2 py-1 rounded text-gray-300">{filteredTenders.length}</span>
-                        <a href="#" className="ml-auto text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">Voir tout <ChevronRight className="w-3 h-3" /></a>
-                    </div>
-                    {/* Filters */}
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {[
-                            { id: 'all', label: 'Tout voir' },
-                            { id: 'armees', label: 'Armée de Terre' },
-                            { id: 'naval', label: 'Marine Nationale' },
-                            { id: 'aerien', label: "Armée de l'Air & Espace" },
-                            { id: 'dga', label: 'DGA' },
-                            { id: 'interieur', label: 'Gendarmerie / Intérieur' },
-                            { id: 'cyber', label: 'Cyberdéfense' },
-                        ].map((filter) => (
-                            <button
-                                key={filter.id}
-                                onClick={() => setActiveFilter(filter.id as FilterType)}
-                                className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors border ${activeFilter === filter.id
-                                    ? 'bg-white text-slate-900 border-white'
-                                    : 'bg-slate-800 text-gray-300 border-slate-600 hover:border-blue-500'
-                                    }`}
-                            >
-                                {filter.label}
-                            </button>
-                        ))}
-                    </div>
+                    {/* Header + Filters Container */}
+                    <div>
+                        {/* Titre + badge */}
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-xl font-semibold text-white">Publiés aujourd'hui</h2>
+                            <span className="bg-slate-700 text-xs px-2 py-1 rounded text-gray-300">{filteredTenders.length}</span>
+                            <a href="#" className="ml-auto text-blue-400 hover:text-blue-300 text-sm">Voir tout &gt;</a>
+                        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {filteredTenders.slice(0, 8).map((tender) => {
-                            const daysLeft = getDaysRemaining(tender.deadlineDate);
-                            const isUrgent = daysLeft !== null && daysLeft <= 7;
-                            const isNew = true; // Simplified for now
-                            const CategoryIcon = getTenderIcon(tender.title);
+                        {/* Filtres catégories */}
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {[
+                                { id: 'all', label: 'Tout voir' },
+                                { id: 'armees', label: 'Armée de Terre' },
+                                { id: 'naval', label: 'Marine Nationale' },
+                                { id: 'aerien', label: "Armée de l'Air & Espace" },
+                                { id: 'dga', label: 'DGA' },
+                                { id: 'interieur', label: 'Gendarmerie / Intérieur' },
+                                { id: 'cyber', label: 'Cyberdéfense' },
+                            ].map((filter) => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => setActiveFilter(filter.id as FilterType)}
+                                    className={`px-3 py-1.5 text-sm rounded-full font-medium transition-colors border ${activeFilter === filter.id
+                                        ? 'bg-white text-slate-900 border-white'
+                                        : 'bg-slate-800 text-gray-300 border-slate-600 hover:border-blue-500'
+                                        }`}
+                                >
+                                    {filter.label}
+                                </button>
+                            ))}
+                        </div>
 
-                            return (
-                                <div key={tender.id} className="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
-                                    <div>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center border border-white/10 group-hover:border-blue-500/30 transition-colors">
-                                                    <CategoryIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                        {/* Grid des cards de marchés (garder l'existant) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {filteredTenders.slice(0, 8).map((tender) => {
+                                const daysLeft = getDaysRemaining(tender.deadlineDate);
+                                const isUrgent = daysLeft !== null && daysLeft <= 7;
+                                const isNew = true; // Simplified for now
+                                const CategoryIcon = getTenderIcon(tender.title);
+
+                                return (
+                                    <div key={tender.id} className="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded bg-slate-800 flex items-center justify-center border border-white/10 group-hover:border-blue-500/30 transition-colors">
+                                                        <CategoryIcon className="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                                    </div>
+                                                    <div className="text-xs text-slate-400 line-clamp-1">{tender.buyer.name}</div>
                                                 </div>
-                                                <div className="text-xs text-slate-400 line-clamp-1">{tender.buyer.name}</div>
+                                                {isUrgent ? (
+                                                    <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-semibold tracking-wide">URGENT</span>
+                                                ) : (
+                                                    <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
+                                                )}
                                             </div>
-                                            {isUrgent ? (
-                                                <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-semibold tracking-wide">URGENT</span>
-                                            ) : (
-                                                <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
-                                            )}
+                                            <h3 className="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors line-clamp-3">
+                                                {tender.title}
+                                            </h3>
+                                            <div className="flex gap-2 mb-4">
+                                                {/* Tags Mockup based on text analysis or generic */}
+                                                <span className="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded line-clamp-1 max-w-[100px]">{tender.cpv || "Marché Public"}</span>
+                                            </div>
                                         </div>
-                                        <h3 className="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors line-clamp-3">
-                                            {tender.title}
-                                        </h3>
-                                        <div className="flex gap-2 mb-4">
-                                            {/* Tags Mockup based on text analysis or generic */}
-                                            <span className="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded line-clamp-1 max-w-[100px]">{tender.cpv || "Marché Public"}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                                        <div className="text-[11px] text-slate-500">
-                                            Lieu: <span className="text-slate-300">{tender.location || "France"}</span>
-                                        </div>
-                                        <div className={`text-[11px] flex items-center gap-1 font-medium ${isUrgent ? 'text-orange-400' : 'text-slate-400'}`}>
-                                            {isUrgent ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                            {daysLeft !== null ? `${daysLeft}j` : 'N/A'}
+                                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                            <div className="text-[11px] text-slate-500">
+                                                Lieu: <span className="text-slate-300">{tender.location || "France"}</span>
+                                            </div>
+                                            <div className={`text-[11px] flex items-center gap-1 font-medium ${isUrgent ? 'text-orange-400' : 'text-slate-400'}`}>
+                                                {isUrgent ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                {daysLeft !== null ? `${daysLeft}j` : 'N/A'}
+                                            </div>
                                         </div>
                                     </div>
+                                );
+                            })}
+                            {filteredTenders.length === 0 && (
+                                <div className="col-span-4 text-center py-10 text-slate-500">
+                                    Aucun marché trouvé pour ces critères.
                                 </div>
-                            );
-                        })}
-                        {filteredTenders.length === 0 && (
-                            <div className="col-span-4 text-center py-10 text-slate-500">
-                                Aucun marché trouvé pour ces critères.
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </section>
 
