@@ -10,6 +10,7 @@ import { EntrepriseModule } from './modules/entreprise/entreprise.module';
 import { PdfModule } from './modules/pdf/pdf.module';
 import { WordModule } from './modules/word/word.module';
 import { DocumentAnalysisModule } from './modules/document-analysis/document-analysis.module';
+import { AnalyseModule } from './modules/analyse/analyse.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -32,6 +33,7 @@ import { AppService } from './app.service';
     PdfModule,
     WordModule,
     DocumentAnalysisModule,
+    AnalyseModule,
   ],
   controllers: [AppController],
   providers: [

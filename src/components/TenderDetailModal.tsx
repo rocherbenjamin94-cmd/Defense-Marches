@@ -158,7 +158,7 @@ export default function TenderDetailModal({ tender, onClose }: TenderDetailModal
                     {/* Footer */}
                     <div className="px-6 md:px-10 py-6 border-t border-white/10 bg-[#14181F]/95 backdrop-blur sticky bottom-0 z-10 md:rounded-b-2xl">
                         <a
-                            href={`/repondre/dc1?marcheId=${tender.id}&acheteur=${encodeURIComponent(tender.buyer.name)}&objet=${encodeURIComponent(tender.title)}&dateLimite=${tender.deadlineDate}`}
+                            href={`/repondre?marcheId=${tender.id}&acheteur=${encodeURIComponent(tender.buyer.name)}&objet=${encodeURIComponent(tender.title)}&dateLimite=${tender.deadlineDate}`}
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-lg transition-colors mb-3 shadow-lg shadow-blue-600/20"
                         >
                             Répondre à cet AO <ChevronRight className="h-5 w-5" />

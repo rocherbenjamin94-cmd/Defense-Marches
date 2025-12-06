@@ -421,23 +421,25 @@ export default function TenderSpotterHome() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[400px]">
 
                         {/* Map Feature */}
-                        <div className="md:col-span-2 bg-white dark:bg-[#14181F] rounded-2xl border border-slate-200 dark:border-white/5 p-6 relative overflow-hidden group flex flex-col shadow-sm dark:shadow-none transition-colors">
+                        <Link href="/carte" className="md:col-span-2 bg-white dark:bg-[#14181F] rounded-2xl border border-slate-200 dark:border-white/5 p-6 relative overflow-hidden group flex flex-col shadow-sm dark:shadow-none transition-all hover:border-blue-500/30 hover:shadow-lg cursor-pointer">
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/10 dark:via-transparent dark:to-transparent"></div>
-                            <div className="relative z-10 flex flex-col h-full pointer-events-none">
-                                <div className="flex items-center justify-between mb-4 pointer-events-auto">
+                            <div className="relative z-10 flex flex-col h-full">
+                                <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-2 text-slate-900 dark:text-white font-medium">
                                         <MapIcon className="w-4 h-4 text-blue-500" /> Cartographie
                                     </div>
-                                    <button className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors">Agrandir</button>
+                                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors flex items-center gap-1">
+                                        Voir la carte <ChevronRight className="w-4 h-4" />
+                                    </span>
                                 </div>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 max-w-sm">Visualisez géographiquement les marchés pour optimiser votre logistique et identifier les clusters régionaux.</p>
 
                                 {/* France Map Visual */}
-                                <div className="flex-1 rounded-lg relative overflow-hidden flex items-center justify-center -m-1 pointer-events-auto">
+                                <div className="flex-1 rounded-lg relative overflow-hidden flex items-center justify-center -m-1">
                                     <FranceMapWidget />
                                 </div>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Smart Search Feature */}
                         <div className="bg-white dark:bg-[#14181F] rounded-2xl border border-slate-200 dark:border-white/5 p-6 relative overflow-hidden flex flex-col h-full shadow-sm dark:shadow-none transition-colors">

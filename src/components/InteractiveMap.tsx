@@ -32,12 +32,34 @@ const PIN_COLORS = {
     mixte: '#6b7280',       // Gris
 };
 
-// Custom Hook to update map view
+// Custom Hook to update map view - only when values actually change
 function MapUpdater({ center, zoom }: { center?: [number, number], zoom?: number }) {
     const map = useMap();
+    const prevCenter = useRef<[number, number] | undefined>(undefined);
+    const prevZoom = useRef<number | undefined>(undefined);
+    const isInitialMount = useRef(true);
+
     useEffect(() => {
+        // Skip on initial mount
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            prevCenter.current = center;
+            prevZoom.current = zoom;
+            return;
+        }
+
+        // Only fly if values actually changed
         if (center && zoom) {
-            map.flyTo(center, zoom, { duration: 1.5 });
+            const centerChanged = !prevCenter.current ||
+                prevCenter.current[0] !== center[0] ||
+                prevCenter.current[1] !== center[1];
+            const zoomChanged = prevZoom.current !== zoom;
+
+            if (centerChanged || zoomChanged) {
+                map.flyTo(center, zoom, { duration: 1.5 });
+                prevCenter.current = center;
+                prevZoom.current = zoom;
+            }
         }
     }, [center, zoom, map]);
     return null;

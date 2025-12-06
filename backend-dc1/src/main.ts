@@ -9,28 +9,17 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // CORS
-  const corsOrigin = configService.get<string>('cors.origin') || '';
-  const defaultOrigins = ['http://localhost:5173', 'https://defense-marches.vercel.app'];
-  const envOrigins = corsOrigin.split(',').filter(o => o.length > 0);
-  const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
-
   app.enableCors({
-    origin: (requestOrigin: string, callback: (err: Error | null, allow?: boolean) => void) => {
-      const isAllowed =
-        !requestOrigin ||
-        allowedOrigins.includes(requestOrigin) ||
-        requestOrigin.endsWith('.vercel.app'); // Allow all Vercel preview deployments
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.warn(`Blocked CORS request from origin: ${requestOrigin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'https://defense-marches.vercel.app',
+      /\.vercel\.app$/
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-user-id'],
   });
 
   // Global validation pipe
