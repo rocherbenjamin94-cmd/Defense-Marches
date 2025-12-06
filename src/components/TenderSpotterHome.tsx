@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import TenderDetailModal from './TenderDetailModal';
 import { Search, Radio, PlusCircle, Clock, Map as MapIcon, Sparkles, ChevronRight, AlertCircle, Twitter, Linkedin, Building2, Flame, TrendingUp, Terminal, Shield, Anchor, Plane, Lock, BadgeCheck, Truck, Wrench, Package, Home, X, Check, FileText } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
@@ -46,11 +47,13 @@ const getTenderIcon = (title: string, category?: string) => {
 
 export default function TenderSpotterHome() {
     const [tenders, setTenders] = useState<Tender[]>([]);
+    const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
     const [loading, setLoading] = useState(true);
     const [lastSync, setLastSync] = useState<Date | null>(null);
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+    const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'open' | 'today' | 'closing'>('all');
 
     // Load Data
     const loadData = async () => {
@@ -89,7 +92,26 @@ export default function TenderSpotterHome() {
     }, [tenders]);
 
     const filteredTenders = useMemo(() => {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const nextWeek = new Date(now);
+        nextWeek.setDate(now.getDate() + 7);
+
         let res = filterTenders(tenders, activeFilter);
+
+        // Apply stat filter
+        if (activeStatFilter === 'open') {
+            res = res.filter(t => t.deadlineDate && new Date(t.deadlineDate) > now);
+        } else if (activeStatFilter === 'today') {
+            res = res.filter(t => t.publicationDate && t.publicationDate.startsWith(todayStr));
+        } else if (activeStatFilter === 'closing') {
+            res = res.filter(t => {
+                if (!t.deadlineDate) return false;
+                const d = new Date(t.deadlineDate);
+                return d >= now && d <= nextWeek;
+            });
+        }
+
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             res = res.filter(t =>
@@ -99,7 +121,7 @@ export default function TenderSpotterHome() {
             );
         }
         return res;
-    }, [tenders, activeFilter, searchQuery]);
+    }, [tenders, activeFilter, searchQuery, activeStatFilter]);
 
     const categories = useMemo(() => categorizeTenders(filteredTenders), [filteredTenders]);
 
@@ -144,8 +166,11 @@ export default function TenderSpotterHome() {
 
                     {/* Search Bar Component */}
                     <div className="relative max-w-2xl mx-auto group">
-                        <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                        <div className="relative bg-white dark:bg-[#14181F] border border-slate-200 dark:border-white/10 rounded-lg p-2 flex items-center shadow-2xl shadow-slate-200/50 dark:shadow-black/50">
+                        {/* Glow Effect behind search bar */}
+                        <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                        {/* Search Input Container */}
+                        <div className="relative bg-white/80 dark:bg-[#14181F]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl p-2 flex items-center shadow-2xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-300 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:scale-[1.01]">
                             <div className="pl-4 text-slate-400 dark:text-slate-500">
                                 <Search className="w-5 h-5" />
                             </div>
@@ -154,17 +179,17 @@ export default function TenderSpotterHome() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Rechercher : drones, cybersécurité, uniformes, blindés..."
-                                className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 px-4 py-3 text-sm focus:outline-none"
+                                className="w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 px-4 py-3 text-base focus:outline-none"
                             />
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 pr-2">
                                 <button
                                     onClick={() => setIsScanModalOpen(true)}
-                                    className="px-4 py-2 text-sm font-semibold rounded-lg btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105 whitespace-nowrap"
+                                    className="px-5 py-2.5 text-sm font-semibold rounded-xl btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105 whitespace-nowrap shadow-lg shadow-blue-500/20"
                                 >
                                     <Sparkles className="w-4 h-4" />
                                     Scan IA
-                                    <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded">BETA</span>
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded font-bold">BETA</span>
                                 </button>
                             </div>
                         </div>
@@ -173,7 +198,7 @@ export default function TenderSpotterHome() {
                     {/* Répondre Button Below Search */}
                     <div className="flex justify-center mt-6">
                         <Link href="/repondre">
-                            <button className="px-4 py-2 text-sm font-semibold rounded-lg btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105">
+                            <button className="px-5 py-2.5 text-sm font-semibold rounded-xl btn-shimmer text-white flex items-center gap-2 transition-all duration-300 hover:scale-105 shadow-lg shadow-blue-500/20">
                                 <FileText className="w-5 h-5" />
                                 <span>Répondre à un appel d'offres</span>
                             </button>
@@ -181,67 +206,76 @@ export default function TenderSpotterHome() {
                     </div>
 
                     {/* AI Scan Modal */}
-                    {isScanModalOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            {/* Overlay */}
-                            <div
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
-                                onClick={() => setIsScanModalOpen(false)}
-                            ></div>
-
-                            {/* Modal Content */}
-                            <div className="relative bg-white dark:bg-[#14181F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-                                {/* Close Button */}
-                                <button
+                    {
+                        isScanModalOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                {/* Overlay */}
+                                <div
+                                    className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
                                     onClick={() => setIsScanModalOpen(false)}
-                                    className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                ></div>
 
-                                {/* Header */}
-                                <div className="text-center mb-8">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                                        <Sparkles className="w-8 h-8 text-blue-400" />
-                                    </div>
-                                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Scan Intelligent IA</h2>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        Notre IA analyse votre profil entreprise et trouve automatiquement les marchés où vous avez le plus de chances de gagner.
-                                    </p>
-                                </div>
-
-                                {/* Benefits List */}
-                                <div className="space-y-4 mb-8">
-                                    {[
-                                        "Score de compatibilité pour chaque marché",
-                                        "Analyse de vos certifications et références",
-                                        "Recommandations personnalisées quotidiennes",
-                                        "Alertes quand un marché parfait est publié"
-                                    ].map((benefit, index) => (
-                                        <div key={index} className="flex items-start gap-3">
-                                            <div className="mt-0.5 w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                                <Check className="w-2.5 h-2.5 text-emerald-500" />
-                                            </div>
-                                            <span className="text-sm text-slate-300">{benefit}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* CTA */}
-                                <div className="text-center">
-                                    <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-all shadow-lg shadow-blue-900/20 mb-3">
-                                        Créer mon profil gratuit
+                                {/* Modal Content */}
+                                <div className="relative bg-white dark:bg-[#14181F] border border-slate-200 dark:border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={() => setIsScanModalOpen(false)}
+                                        className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
                                     </button>
-                                    <p className="text-[10px] text-slate-500">Gratuit • 2 minutes • Sans CB</p>
+
+                                    {/* Header */}
+                                    <div className="text-center mb-8">
+                                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                                            <Sparkles className="w-8 h-8 text-blue-400" />
+                                        </div>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Scan Intelligent IA</h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            Notre IA analyse votre profil entreprise et trouve automatiquement les marchés où vous avez le plus de chances de gagner.
+                                        </p>
+                                    </div>
+
+                                    {/* Benefits List */}
+                                    <div className="space-y-4 mb-8">
+                                        {[
+                                            "Score de compatibilité pour chaque marché",
+                                            "Analyse de vos certifications et références",
+                                            "Recommandations personnalisées quotidiennes",
+                                            "Alertes quand un marché parfait est publié"
+                                        ].map((benefit, index) => (
+                                            <div key={index} className="flex items-start gap-3">
+                                                <div className="mt-0.5 w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                                    <Check className="w-2.5 h-2.5 text-emerald-500" />
+                                                </div>
+                                                <span className="text-sm text-slate-300">{benefit}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* CTA */}
+                                    <div className="text-center">
+                                        <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-all shadow-lg shadow-blue-900/20 mb-3">
+                                            Créer mon profil gratuit
+                                        </button>
+                                        <p className="text-[10px] text-slate-500">Gratuit • 2 minutes • Sans CB</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     {/* Real-time Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto mb-16">
                         {/* Card 1 : Marchés ouverts */}
-                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                        <div
+                            onClick={() => setActiveStatFilter(activeStatFilter === 'open' ? 'all' : 'open')}
+                            className={`cursor-pointer transition-all duration-200 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none border
+                                ${activeStatFilter === 'open'
+                                    ? 'bg-emerald-500/10 border-emerald-500/50 ring-2 ring-emerald-500/30'
+                                    : 'bg-white/80 dark:bg-[#14181F]/50 border-slate-200 dark:border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5'}
+                            `}
+                        >
                             <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.openCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <Radio className="w-4 h-4 text-emerald-500" /> Marchés ouverts
@@ -249,7 +283,14 @@ export default function TenderSpotterHome() {
                         </div>
 
                         {/* Card 2 : Publiés ce jour */}
-                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                        <div
+                            onClick={() => setActiveStatFilter(activeStatFilter === 'today' ? 'all' : 'today')}
+                            className={`cursor-pointer transition-all duration-200 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none border
+                                ${activeStatFilter === 'today'
+                                    ? 'bg-blue-500/10 border-blue-500/50 ring-2 ring-blue-500/30'
+                                    : 'bg-white/80 dark:bg-[#14181F]/50 border-slate-200 dark:border-white/5 hover:border-blue-500/30 hover:bg-blue-500/5'}
+                            `}
+                        >
                             <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.todayCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <PlusCircle className="w-4 h-4 text-blue-500" /> Publiés ce jour
@@ -257,23 +298,43 @@ export default function TenderSpotterHome() {
                         </div>
 
                         {/* Card 3 : Clôture bientôt */}
-                        <div className="bg-white/80 dark:bg-[#14181F]/50 border border-slate-200 dark:border-white/5 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none">
+                        <div
+                            onClick={() => setActiveStatFilter(activeStatFilter === 'closing' ? 'all' : 'closing')}
+                            className={`cursor-pointer transition-all duration-200 p-6 rounded-xl backdrop-blur-sm text-center shadow-sm dark:shadow-none border
+                                ${activeStatFilter === 'closing'
+                                    ? 'bg-orange-500/10 border-orange-500/50 ring-2 ring-orange-500/30'
+                                    : 'bg-white/80 dark:bg-[#14181F]/50 border-slate-200 dark:border-white/5 hover:border-orange-500/30 hover:bg-orange-500/5'}
+                            `}
+                        >
                             <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{stats.closingCount}</div>
                             <div className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-2">
                                 <Clock className="w-4 h-4 text-orange-500" /> Clôture &lt; 7 jours
                             </div>
                         </div>
                     </div>
-                </section>
+                </section >
 
                 {/* Section 1: Publiés Aujourd'hui (Using filtered data or Just Dropped) */}
-                <section className="max-w-[1400px] mx-auto px-6 mb-16">
+                < section className="max-w-[1400px] mx-auto px-6 mb-16" >
                     {/* Header + Filters Container */}
                     <div>
                         {/* Titre + badge */}
                         <div className="flex items-center gap-3 mb-4">
-                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Publiés aujourd'hui</h2>
+                            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                                {activeStatFilter === 'open' && 'Marchés ouverts'}
+                                {activeStatFilter === 'today' && 'Publiés aujourd\'hui'}
+                                {activeStatFilter === 'closing' && 'Clôturant sous 7 jours'}
+                                {activeStatFilter === 'all' && 'Tous les marchés'}
+                            </h2>
                             <span className="bg-slate-200 dark:bg-slate-700 text-xs px-2 py-1 rounded text-slate-700 dark:text-gray-300">{filteredTenders.length}</span>
+                            {activeStatFilter !== 'all' && (
+                                <button
+                                    onClick={() => setActiveStatFilter('all')}
+                                    className="ml-2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-white transition-colors"
+                                >
+                                    ✕ Réinitialiser
+                                </button>
+                            )}
                             <a href="#" className="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 text-sm">Voir tout &gt;</a>
                         </div>
 
@@ -310,7 +371,7 @@ export default function TenderSpotterHome() {
                                 const CategoryIcon = getTenderIcon(tender.title);
 
                                 return (
-                                    <div key={tender.id} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px] shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-blue-500/30">
+                                    <div key={tender.id} onClick={() => setSelectedTender(tender)} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px] shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-blue-500/30">
                                         <div>
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3">
@@ -351,11 +412,11 @@ export default function TenderSpotterHome() {
                                 </div>
                             )}
                         </div>
-                    </div>
-                </section>
+                    </div >
+                </section >
 
                 {/* Bento Grid / Feature Highlights */}
-                <section className="max-w-[1400px] mx-auto px-6 mb-16">
+                < section className="max-w-[1400px] mx-auto px-6 mb-16" >
                     <h2 className="text-xl font-medium text-slate-900 dark:text-white tracking-tight mb-6">Intelligence Marché</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[400px]">
 
@@ -429,7 +490,7 @@ export default function TenderSpotterHome() {
                         </div>
 
                     </div>
-                </section>
+                </section >
 
                 {/* Section 2: Ministère des Armées Specific */}
                 {/* Only show if we have data for it */}
@@ -497,10 +558,15 @@ export default function TenderSpotterHome() {
                         <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-6">Aucune carte bancaire requise. 14 jours d'essai offert.</p>
                     </div>
                 </section>
-
-            </main >
+            </main>
 
             {/* Footer handled globally in layout.tsx */}
-        </div >
+            {selectedTender && (
+                <TenderDetailModal
+                    tender={selectedTender}
+                    onClose={() => setSelectedTender(null)}
+                />
+            )}
+        </div>
     );
 }

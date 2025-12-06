@@ -55,7 +55,7 @@ function DC2PageContent() {
 
 export default function DC2Page() {
     return (
-        <div className="min-h-screen bg-[#08080c] text-white pt-20">
+        <div className="min-h-screen bg-[#0B0D11] text-white pt-20">
             <FormProvider>
                 <DC2FormProvider>
                     <DC2PageContent />

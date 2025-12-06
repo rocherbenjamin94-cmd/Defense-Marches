@@ -5,7 +5,7 @@ import { Twitter, Linkedin } from 'lucide-react';
 
 export default function Footer() {
     return (
-        <footer className="border-t border-white/5 bg-[#0C0E12] pt-12 pb-8">
+        <footer className="border-t border-white/5 bg-[#0B0D11] pt-12 pb-8">
             <div className="max-w-[1400px] mx-auto px-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
                     <div className="col-span-2 md:col-span-1">

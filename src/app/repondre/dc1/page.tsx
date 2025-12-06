@@ -48,7 +48,7 @@ function DC1PageContent() {
 
 export default function DC1Page() {
     return (
-        <div className="min-h-screen bg-[#08080c] text-white pt-20 dc1-wrapper">
+        <div className="min-h-screen bg-[#0B0D11] text-white pt-20 dc1-wrapper">
             <FormProvider>
                 <Suspense fallback={<div>Chargement...</div>}>
                     <DC1PageContent />

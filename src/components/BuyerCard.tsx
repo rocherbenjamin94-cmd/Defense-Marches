@@ -33,7 +33,7 @@ export default function BuyerCard({ buyer }: BuyerCardProps) {
 
     return (
         <Link href={`/acheteurs/${buyer.id}`} className="block group">
-            <div className="bg-[#121218] border border-navy-700 rounded-xl p-5 hover:border-gold-500/50 hover:shadow-lg hover:shadow-gold-500/5 transition-all duration-300 relative overflow-hidden">
+            <div className="bg-[#14181F] border border-white/5 rounded-xl p-5 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 relative overflow-hidden">
 
                 {/* Hover Effect Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
@@ -43,33 +43,33 @@ export default function BuyerCard({ buyer }: BuyerCardProps) {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                             <div className={clsx("w-2 h-2 rounded-full", familyStyle.split(' ')[0].replace('text-', 'bg-').replace('-400', '-500'))}></div>
-                            <h3 className="text-lg font-bold text-white truncate group-hover:text-gold-500 transition-colors">
+                            <h3 className="text-lg font-bold text-white truncate group-hover:text-blue-500 transition-colors">
                                 {buyer.nom}
                             </h3>
-                            <Badge variant="outline" className="text-xs text-gray-500 border-navy-600">
+                            <Badge variant="outline" className="text-xs text-slate-500 border-white/10">
                                 {buyer.departement}
                             </Badge>
                         </div>
 
-                        <div className="flex items-center text-sm text-gray-400 mb-4">
+                        <div className="flex items-center text-sm text-slate-400 mb-4">
                             <span className="truncate">{buyer.parent}</span>
                             <span className="mx-2">•</span>
                             <span className="truncate">{buyer.adresse}</span>
                         </div>
 
                         <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center text-gray-300">
+                            <div className="flex items-center text-slate-300">
                                 <span className="text-lg mr-2">📋</span>
                                 <span className="font-bold text-white">{buyer.activeTenders}</span>
-                                <span className="ml-1 text-gray-500">actifs</span>
+                                <span className="ml-1 text-slate-500">actifs</span>
                             </div>
-                            <div className="flex items-center text-gray-300">
+                            <div className="flex items-center text-slate-300">
                                 <span className="text-lg mr-2">📦</span>
                                 <span className="font-bold text-white">34</span>
-                                <span className="ml-1 text-gray-500">cette année</span>
+                                <span className="ml-1 text-slate-500">cette année</span>
                             </div>
                             {buyer.totalAmount && (
-                                <div className="flex items-center text-gray-300">
+                                <div className="flex items-center text-slate-300">
                                     <span className="text-lg mr-2">💰</span>
                                     <span className="font-bold text-white">~{(buyer.totalAmount / 1000000).toFixed(1)}M€</span>
                                 </div>
@@ -82,7 +82,7 @@ export default function BuyerCard({ buyer }: BuyerCardProps) {
                         <div className={clsx("px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border", familyStyle)}>
                             {FAMILY_LABELS[buyer.famille]}
                         </div>
-                        <div className="flex items-center text-gold-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        <div className="flex items-center text-blue-500 text-sm font-bold opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
                             Voir <ArrowRight className="h-4 w-4 ml-1" />
                         </div>
                     </div>

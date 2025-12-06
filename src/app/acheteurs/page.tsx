@@ -26,7 +26,7 @@ export default function BuyersPage() {
     }).sort((a, b) => b.activeTenders - a.activeTenders); // Default sort by active tenders
 
     return (
-        <div className="min-h-screen bg-[#0a0a0f] text-gray-100 font-sans selection:bg-gold-500/30">
+        <div className="min-h-screen bg-[#0B0D11] text-gray-100 font-sans selection:bg-blue-500/30">
             {/* Navbar handled by layout */}
 
             <main className="pt-[70px] pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,17 +38,17 @@ export default function BuyersPage() {
                     <div className="flex gap-4">
                         <div className="relative flex-1">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-500" />
+                                <Search className="h-5 w-5 text-slate-500" />
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-10 pr-3 py-3 bg-[#121218] border border-navy-700 rounded-xl leading-5 text-gray-300 placeholder-gray-500 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all"
+                                className="block w-full pl-10 pr-3 py-3 bg-[#14181F] border border-white/10 rounded-xl leading-5 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                                 placeholder="Rechercher un acheteur par nom, ville..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <button className="px-4 py-3 bg-[#121218] border border-navy-700 rounded-xl text-gray-400 hover:text-white hover:border-gray-500 transition-colors flex items-center gap-2">
+                        <button className="px-4 py-3 bg-[#14181F] border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2">
                             <Filter className="h-5 w-5" />
                             <span className="hidden sm:inline">Filtres</span>
                         </button>
@@ -63,8 +63,8 @@ export default function BuyersPage() {
                                 className={clsx(
                                     "px-3 py-1.5 rounded-full text-sm font-medium transition-all border",
                                     activeFilter === filter.id
-                                        ? "bg-navy-700 text-white border-navy-500"
-                                        : "bg-navy-800/50 text-gray-400 border-navy-700 hover:bg-navy-800"
+                                        ? "bg-blue-600 text-white border-blue-500"
+                                        : "bg-[#14181F] text-slate-400 border-white/5 hover:bg-white/5"
                                 )}
                             >
                                 <span className={filter.color}>{filter.id !== 'all' ? '● ' : ''}</span>
