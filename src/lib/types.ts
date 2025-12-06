@@ -18,6 +18,7 @@ export type Tender = {
   boampUrl: string;
   score: number; // Relevance score (0-100)
   cpv?: string;
+  location?: string;
 };
 
 export type TenderStats = {

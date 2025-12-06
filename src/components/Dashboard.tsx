@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Navbar from "@/components/Navbar";
 import StatsBar from "@/components/StatsBar";
 import FilterBar from "@/components/FilterBar";
 import TenderCard from "@/components/TenderCard";

@@ -1,0 +1,536 @@
+<html lang="fr"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TenderSpotter | Intelligence des Marchés Publics de Défense</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-body: #0B0D11;
+            --bg-card: #14181F;
+            --border-color: rgba(255, 255, 255, 0.08);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: #94A3B8;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-body);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2D313A;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3E4451;
+        }
+        .glass-panel {
+            background: rgba(11, 13, 17, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .grid-pattern {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        }
+        .card-hover:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+        .text-glow {
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-blue-900/50 selection:text-blue-200">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-panel h-16">
+        <div class="max-w-[1400px] mx-auto px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-10">
+                <!-- Logo -->
+                <a href="#" class="text-white font-bold tracking-tighter text-lg flex items-center gap-2">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    TENDERSPOTTER
+                </a>
+                
+                <!-- Desktop Nav -->
+                <div class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-400">
+                    <a href="#" class="text-white">Marchés</a>
+                    <a href="#" class="hover:text-white transition-colors">Carte</a>
+                    <a href="#" class="hover:text-white transition-colors">Acheteurs</a>
+                    <a href="#" class="hover:text-white transition-colors">Alertes</a>
+                    <a href="#" class="hover:text-white transition-colors">Favoris</a>
+                    <a href="#" class="hover:text-white transition-colors">Stats</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                    Live Stream
+                </div>
+                <div class="h-4 w-[1px] bg-white/10 mx-2"></div>
+                <a href="#" class="text-xs font-medium text-slate-300 hover:text-white transition-colors">Connexion</a>
+                <a href="#" class="bg-white text-black text-xs font-semibold px-4 py-2 rounded-md hover:bg-slate-200 transition-colors">
+                    Répondre
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-24 pb-20 relative min-h-screen">
+        
+        <!-- Background Ambience -->
+        <div class="absolute inset-0 grid-pattern pointer-events-none -z-10"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[500px] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+
+        <!-- Hero / Search Section -->
+        <section class="max-w-5xl mx-auto px-6 mb-16 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/5 text-[11px] font-medium text-blue-300 mb-8 tracking-wide uppercase">
+                Intelligence Stratégique Défense &amp; Sécurité
+            </div>
+            
+            <h1 class="text-4xl md:text-6xl font-semibold text-white tracking-tight mb-6 leading-[1.1]">
+                Le radar des opportunités <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-slate-400">du secteur défense.</span>
+            </h1>
+            
+            <p class="text-slate-400 text-lg max-w-2xl mx-auto mb-10 font-light">
+                Centralisez, analysez et répondez aux appels d'offres du Ministère des Armées, de la DGA et des acteurs de la sécurité intérieure.
+            </p>
+
+            <!-- Search Bar Component -->
+            <div class="relative max-w-2xl mx-auto group">
+                <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="relative bg-[#14181F] border border-white/10 rounded-lg p-2 flex items-center shadow-2xl">
+                    <div class="pl-4 text-slate-500">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </div>
+                    <input type="text" placeholder="Rechercher : drones, cybersécurité, uniformes, blindés..." class="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 px-4 py-3 text-sm focus:outline-none">
+                    <div class="hidden sm:flex text-[10px] text-slate-600 border border-white/10 px-2 py-1 rounded mr-2">⌘K</div>
+                    <button class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-colors">
+                        Scanner
+                    </button>
+                </div>
+            </div>
+
+            <!-- Real-time Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto">
+                <div class="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
+                    <div class="text-2xl font-semibold text-white tracking-tight">2 418</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
+                        <i data-lucide="radio" class="w-3 h-3 text-emerald-500"></i> Marchés ouverts
+                    </div>
+                </div>
+                <div class="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
+                    <div class="text-2xl font-semibold text-white tracking-tight">86</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
+                        <i data-lucide="plus-circle" class="w-3 h-3 text-blue-500"></i> Publiés ce jour
+                    </div>
+                </div>
+                <div class="bg-[#14181F]/50 border border-white/5 p-4 rounded-lg backdrop-blur-sm">
+                    <div class="text-2xl font-semibold text-white tracking-tight">142</div>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center justify-center gap-1">
+                        <i data-lucide="clock" class="w-3 h-3 text-orange-500"></i> Clôture J-7
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Category Filters (Netflix Style) -->
+        <section class="max-w-[1400px] mx-auto px-6 mb-10 overflow-hidden">
+            <div class="flex items-center gap-3 overflow-x-auto pb-4 no-scrollbar">
+                <button class="shrink-0 bg-white text-black px-4 py-2 rounded-full text-xs font-semibold hover:bg-slate-200 transition-colors">
+                    Tout voir
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    Armée de Terre
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    Marine Nationale
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    Armée de l'Air &amp; Espace
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    DGA
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    Gendarmerie / Intérieur
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    Cyberdéfense
+                </button>
+                <button class="shrink-0 bg-[#1A1E26] border border-white/10 text-slate-300 px-4 py-2 rounded-full text-xs font-medium hover:bg-[#252A33] hover:text-white transition-colors hover:border-white/20">
+                    SSA (Santé)
+                </button>
+            </div>
+        </section>
+
+        <!-- Section 1: Publiés Aujourd'hui -->
+        <section class="max-w-[1400px] mx-auto px-6 mb-16">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-medium text-white tracking-tight flex items-center gap-2">
+                    Publiés aujourd'hui 
+                    <span class="text-xs font-normal text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-2">86</span>
+                </h2>
+                <a href="#" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                    Voir tout <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Card 1 -->
+                <div class="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white border border-white/10">DGA</div>
+                                <div class="text-xs text-slate-400">Direction Générale de l'Armement</div>
+                            </div>
+                            <span class="px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
+                        </div>
+                        <h3 class="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors">
+                            Développement de solutions de chiffrement post-quantique pour réseaux tactiques.
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">Cyber</span>
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">R&amp;D</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div class="text-[11px] text-slate-500">
+                            Budget: <span class="text-slate-300">2M€ - 5M€</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3 h-3"></i> 45j
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded bg-emerald-900/30 flex items-center justify-center text-[10px] font-bold text-emerald-400 border border-emerald-500/20">AT</div>
+                                <div class="text-xs text-slate-400">Armée de Terre</div>
+                            </div>
+                            <span class="px-2 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-semibold tracking-wide">URGENT</span>
+                        </div>
+                        <h3 class="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors">
+                            Fourniture de pièces détachées pour véhicules blindés légers (VBL) - Lot 4.
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">MCO</span>
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">Terrestre</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div class="text-[11px] text-slate-500">
+                            Lieu: <span class="text-slate-300">Versailles</span>
+                        </div>
+                        <div class="text-[11px] text-orange-400 flex items-center gap-1 font-medium">
+                            <i data-lucide="alert-circle" class="w-3 h-3"></i> 5j restants
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded bg-indigo-900/30 flex items-center justify-center text-[10px] font-bold text-indigo-400 border border-indigo-500/20">MIN</div>
+                                <div class="text-xs text-slate-400">Ministère Intérieur</div>
+                            </div>
+                            <span class="px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-semibold tracking-wide">NEW</span>
+                        </div>
+                        <h3 class="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors">
+                            Renouvellement parc de drones de surveillance pour la Gendarmerie Nationale.
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">Drones</span>
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">Sécurité</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div class="text-[11px] text-slate-500">
+                            Accord Cadre
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3 h-3"></i> 30j
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="bg-[#14181F] border border-white/5 rounded-xl p-5 card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer h-[240px]">
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white border border-white/10">AID</div>
+                                <div class="text-xs text-slate-400">Agence Innovation</div>
+                            </div>
+                        </div>
+                        <h3 class="text-sm font-medium text-white leading-snug mb-3 group-hover:text-blue-400 transition-colors">
+                            Appel à projet : Intelligence Artificielle pour l'analyse d'images satellitaires.
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">IA</span>
+                            <span class="text-[10px] text-slate-500 border border-white/5 px-1.5 py-0.5 rounded">Spatial</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div class="text-[11px] text-slate-500">
+                            Subvention
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3 h-3"></i> 60j
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Bento Grid / Feature Highlights -->
+        <section class="max-w-[1400px] mx-auto px-6 mb-16">
+            <h2 class="text-xl font-medium text-white tracking-tight mb-6">Intelligence Marché</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[400px]">
+                
+                <!-- Map Feature -->
+                <div class="md:col-span-2 bg-[#14181F] rounded-2xl border border-white/5 p-6 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent"></div>
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 text-white font-medium">
+                                <i data-lucide="map" class="w-4 h-4 text-blue-500"></i> Cartographie
+                            </div>
+                            <button class="text-xs text-slate-500 hover:text-white transition-colors">Agrandir</button>
+                        </div>
+                        <p class="text-sm text-slate-400 mb-6 max-w-sm">Visualisez géographiquement les marchés pour optimiser votre logistique et identifier les clusters régionaux.</p>
+                        
+                        <!-- Abstract Map Visual -->
+                        <div class="flex-1 bg-[#0F1115] rounded-lg border border-white/5 relative overflow-hidden">
+                            <!-- Map dots -->
+                            <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                            <div class="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <div class="absolute bottom-1/3 right-1/3 w-1.5 h-1.5 bg-slate-600 rounded-full"></div>
+                            <div class="absolute top-1/2 right-1/4 w-1.5 h-1.5 bg-slate-600 rounded-full"></div>
+                            <div class="absolute bottom-10 left-10 bg-[#1A1E26] border border-white/10 p-2 rounded text-[10px] text-white flex gap-2 items-center shadow-lg">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span>Base Navale Brest (12)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Feature -->
+                <div class="bg-[#14181F] rounded-2xl border border-white/5 p-6 relative overflow-hidden">
+                    <div class="relative z-10 flex flex-col h-full">
+                        <div class="flex items-center gap-2 text-white font-medium mb-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-500"></i> Prévisions
+                        </div>
+                        <p class="text-sm text-slate-400 mb-8">Anticipez les renouvellements de contrats majeurs.</p>
+                        
+                        <div class="space-y-4">
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider">
+                                    <span>Cybersécurité</span>
+                                    <span class="text-emerald-400">+12%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-[#0F1115] rounded-full overflow-hidden">
+                                    <div class="h-full bg-emerald-500 w-[65%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider">
+                                    <span>Infrastructures</span>
+                                    <span class="text-slate-500">-5%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-[#0F1115] rounded-full overflow-hidden">
+                                    <div class="h-full bg-slate-600 w-[40%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-[10px] text-slate-400 uppercase tracking-wider">
+                                    <span>MCO Terrestre</span>
+                                    <span class="text-blue-400">+8%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-[#0F1115] rounded-full overflow-hidden">
+                                    <div class="h-full bg-blue-500 w-[80%] rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto pt-6">
+                            <button class="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white rounded transition-colors">
+                                Voir le rapport annuel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Ministère des Armées Specific -->
+        <section class="max-w-[1400px] mx-auto px-6 mb-20">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-medium text-white tracking-tight flex items-center gap-2">
+                    Ministère des Armées
+                    <span class="text-xs font-normal text-slate-500 border border-white/10 px-2 py-0.5 rounded ml-2">Focus</span>
+                </h2>
+            </div>
+
+            <!-- List View Style for variety -->
+            <div class="flex flex-col gap-3">
+                
+                <!-- Row 1 -->
+                <div class="group bg-[#14181F] border border-white/5 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:border-slate-600 transition-colors cursor-pointer">
+                    <div class="flex items-center gap-4 mb-3 md:mb-0">
+                        <div class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-white border border-white/10 shrink-0">SCA</div>
+                        <div>
+                            <h3 class="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">Fourniture d'effets d'habillement combat zone froide</h3>
+                            <div class="text-xs text-slate-500 mt-1">Service du Commissariat des Armées • Lille</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                        <div class="flex gap-2">
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Textile</span>
+                        </div>
+                        <div class="text-xs font-medium text-white bg-blue-600/20 text-blue-300 px-3 py-1 rounded border border-blue-500/20">
+                            25j restants
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="group bg-[#14181F] border border-white/5 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:border-slate-600 transition-colors cursor-pointer">
+                    <div class="flex items-center gap-4 mb-3 md:mb-0">
+                        <div class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-white border border-white/10 shrink-0">DIRISI</div>
+                        <div>
+                            <h3 class="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">Maintenance des infrastructures réseaux sécurisés (Niveau Secret)</h3>
+                            <div class="text-xs text-slate-500 mt-1">Direction Interarmées des Réseaux • National</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                        <div class="flex gap-2">
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Infra</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Secret Défense</span>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400 px-3 py-1">
+                            12j restants
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="group bg-[#14181F] border border-white/5 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:border-slate-600 transition-colors cursor-pointer">
+                    <div class="flex items-center gap-4 mb-3 md:mb-0">
+                        <div class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center text-xs font-bold text-white border border-white/10 shrink-0">SSF</div>
+                        <div>
+                            <h3 class="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">Pièces de rechange pour chaufferies nucléaires embarquées</h3>
+                            <div class="text-xs text-slate-500 mt-1">Service de Soutien de la Flotte • Toulon</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                        <div class="flex gap-2">
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Naval</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded">Nucléaire</span>
+                        </div>
+                        <div class="text-xs font-medium text-slate-400 px-3 py-1">
+                            34j restants
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA / Footer Area -->
+        <section class="border-t border-white/5 bg-[#0B0D11]">
+            <div class="max-w-5xl mx-auto px-6 py-20 text-center">
+                <h2 class="text-3xl font-medium text-white tracking-tight mb-4">Ne manquez plus aucun appel d'offre stratégique.</h2>
+                <p class="text-slate-400 mb-8 max-w-lg mx-auto">Créez votre profil TenderSpotter, configurez vos alertes mots-clés et recevez les marchés pertinents chaque matin.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <button class="bg-white text-black px-6 py-3 rounded-md text-sm font-bold hover:bg-slate-200 transition-colors">
+                        Commencer l'essai gratuit
+                    </button>
+                    <button class="bg-transparent border border-white/10 text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-white/5 transition-colors">
+                        Voir la démo
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-600 mt-6">Aucune carte bancaire requise. 14 jours d'essai offert.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 bg-[#0C0E12] pt-12 pb-8">
+        <div class="max-w-[1400px] mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+                <div class="col-span-2 md:col-span-1">
+                    <a href="#" class="text-white font-bold tracking-tighter text-sm flex items-center gap-2 mb-4">
+                        <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        TENDERSPOTTER
+                    </a>
+                    <p class="text-xs text-slate-500">La plateforme de référence pour les marchés publics de défense et sécurité en France.</p>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Plateforme</h4>
+                    <ul class="space-y-2 text-xs text-slate-500">
+                        <li><a href="#" class="hover:text-white transition-colors">Marchés</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Analyse DGA</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Tarifs</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Ressources</h4>
+                    <ul class="space-y-2 text-xs text-slate-500">
+                        <li><a href="#" class="hover:text-white transition-colors">Guide des MP</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Blog Défense</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Partenaires</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-xs font-semibold text-white uppercase tracking-wider mb-4">Légal</h4>
+                    <ul class="space-y-2 text-xs text-slate-500">
+                        <li><a href="#" class="hover:text-white transition-colors">Mentions légales</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">CGV</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="flex justify-between items-center border-t border-white/5 pt-8">
+                <p class="text-xs text-slate-600">© 2024 TenderSpotter SAS. Tous droits réservés.</p>
+                <div class="flex gap-4">
+                    <i data-lucide="twitter" class="w-4 h-4 text-slate-600 hover:text-white cursor-pointer transition-colors"></i>
+                    <i data-lucide="linkedin" class="w-4 h-4 text-slate-600 hover:text-white cursor-pointer transition-colors"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+
+</body></html>

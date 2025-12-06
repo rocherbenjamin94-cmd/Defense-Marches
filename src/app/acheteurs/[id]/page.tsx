@@ -1,14 +1,13 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
 import { BUYERS_LOCATIONS } from '@/lib/buyers';
 import { ArrowLeft, Bell, MapPin, ExternalLink, Building2, Filter } from 'lucide-react';
 import clsx from 'clsx';
 import BuyerHistory from '@/components/BuyerHistory';
 import Badge from '@/components/Badge';
 
-const FAMILY_COLORS = {
+const FAMILY_COLORS: Record<string, string> = {
     armees: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
     interieur: 'text-red-400 bg-red-400/10 border-red-400/20',
     renseignement: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
@@ -17,7 +16,7 @@ const FAMILY_COLORS = {
     mixte: 'text-gray-400 bg-gray-400/10 border-gray-400/20',
 };
 
-const FAMILY_LABELS = {
+const FAMILY_LABELS: Record<string, string> = {
     armees: 'Armées',
     interieur: 'Intérieur',
     renseignement: 'Renseignement',
@@ -48,7 +47,7 @@ export default function BuyerDetailPage() {
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-gray-100 font-sans selection:bg-gold-500/30">
-            <Navbar />
+            {/* Navbar handled by layout */}
 
             <main className="pt-[70px] pb-20 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
