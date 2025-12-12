@@ -20,15 +20,16 @@ interface CachedPlaceData {
 function rowToMarchePlace(row: PlaceTenderRow): MarchePlace {
     return {
         id: row.id,
-        reference: row.reference || undefined,
+        reference: row.reference || '',
         titre: row.titre,
-        acheteur: row.acheteur || undefined,
+        acheteur: row.acheteur || '',
         dateLimite: row.date_limite?.toISOString().split('T')[0] || '',
         datePublication: row.date_publication?.toISOString().split('T')[0] || '',
-        typeProcedure: row.type_procedure || undefined,
-        procedure: row.procedure || undefined,
-        lieu: row.lieu || undefined,
+        type: row.type_procedure || '',
+        procedure: row.procedure || '',
+        lieu: row.lieu || '',
         url: row.url || '',
+        source: 'PLACE',
         ministry: (row.ministry as 'MINARM' | 'MININT') || 'MINARM',
     };
 }
