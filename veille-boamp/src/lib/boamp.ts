@@ -1,0 +1,1036 @@
+// src/lib/boamp.ts
+import { Tender, MarketNature, AmountRange } from './types';
+
+const API_ENDPOINT = "https://boamp-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/boamp/records";
+
+// ============================================================================
+// STRATÉGIE DE FILTRAGE STRUCTURÉ
+// ============================================================================
+// 1. Filtrage API (WHERE) : par préfixe d'acheteur (nomacheteur)
+// 2. Filtrage client : par code CPV division 35 (Défense/Sécurité)
+//
+// Pas de recherche full-text dans l'objet pour éviter les faux positifs.
+// ============================================================================
+
+// Préfixes d'acheteurs ciblés (filtrage côté API avec startswith)
+const BUYER_PREFIXES = {
+    // Ministère des Armées
+    defense: [
+        "MINDEF",           // Ministère de la Défense (toutes entités)
+        "MINARM",           // Ministère des Armées (nouvelle appellation)
+        "ESID",             // Établissements du Service Infrastructure de la Défense
+    ],
+    // Ministère de l'Intérieur
+    interior: [
+        "MINT/DGGN",        // Direction Générale Gendarmerie Nationale
+        "MIOCT/Gendarmerie", // Gendarmerie (ancienne nomenclature)
+        "MIOMCT/DGGN",      // Gendarmerie (variante)
+        "MIOMCTI/GN",       // Gendarmerie (variante)
+    ]
+};
+
+// Patterns exacts d'acheteurs (filtrage côté API avec search)
+// Liste étendue pour capturer tous les acheteurs défense/intérieur
+const BUYER_PATTERNS = [
+    // ===== MINISTERE DES ARMEES =====
+    "Ministère des armées", "Ministère des Armées", "MINARM", "MINDEF",
+    // DGA et ses entités
+    "Direction générale de l'armement", "DGA", "Agence du numérique de défense",
+    "DA-BA", "DA-BD", "DA-BS", "DA-BZ", "DA-IDFN", "DA-SE", "DA-SO", "SCAT",
+    "DGA Essais", "DGA Techniques", "DGA Maîtrise",
+    // SCA - Service du Commissariat
+    "Service du Commissariat des Armées", "SCA",
+    "Groupement de soutien de la Base de Défense", "GSBdD",
+    "Plate-forme commissariat", "PFC",
+    "Économat des armées", "Economat des armées",
+    "Cercle National des Armées", "Cercle de la base de défense", "Cercle mixte",
+    // SID - Infrastructure
+    "Service d'Infrastructure de la Défense", "Service d'infrastructure de la défense",
+    "SID", "ESID", "DID", "Direction d'infrastructure", "CETID",
+    // SSA - Santé des Armées
+    "Service de Santé des Armées", "Service de santé des armées", "SSA", "DAPSA",
+    // SEO - Énergie Opérationnelle
+    "Service de l'Énergie Opérationnelle", "SEO", "CSTA", "Base Pétrolière Interarmées", "BPIA",
+    // SIMMT et SIMU
+    "SIMMT", "Structure Intégrée du Maintien en condition opérationnelle",
+    "SIMU", "Service interarmées des munitions",
+    // DMAé - Maintenance Aéronautique
+    "Direction de la maintenance aéronautique", "DMAé", "SSAM",
+    // Marine
+    "Marine nationale", "BCRM", "Base navale", "SHOM", "Service hydrographique",
+    "SSF", "Service de soutien de la flotte", "Ecole Navale", "École Navale",
+    "Musée national de la Marine",
+    // Armée de Terre
+    "Armée de terre", "Armée de Terre", "STAT", "Section Technique de l'Armée de Terre",
+    "SMITer", "Service de la Maintenance Industrielle Terrestre", "BSMAT",
+    "Légion étrangère", "COMLE", "Saint-Cyr", "Coëtquidan",
+    // Armée de l'Air
+    "Armée de l'air", "Armée de l'Air", "Ecole de l'Air", "École de l'Air",
+    "Base aérienne", "SIAé", "SERVICE INDUSTRIEL DE L'AÉRONAUTIQUE",
+    "AIA", "Atelier Industriel de l'Aéronautique",
+    // SGA et entités rattachées
+    "Secrétariat général pour l'administration", "SGA",
+    "Service Historique de la Défense", "SHD",
+    "Direction du Service National", "DSNJ", "Établissement du service national",
+    "Centre Ministériel de Gestion", "Défense mobilité",
+    // Musées et entités culturelles
+    "Musée de l'Armée", "Musée de l'Air", "Musée de la Marine",
+    "Institution nationale des Invalides", "ECPAD",
+    // ONACVG
+    "ONACVG", "Office national des combattants",
+    // Enseignement défense
+    "ENSTA", "Ecole Polytechnique", "École Polytechnique",
+    "Institut Polytechnique de Paris", "ISAE", "Institut supérieur de l'aéronautique",
+    // DIRISI et autres
+    "DIRISI", "ONERA", "AMIAD",
+
+    // ===== MINISTERE DE L'INTERIEUR =====
+    // Gendarmerie
+    "Gendarmerie nationale", "Gendarmerie Nationale", "DGGN",
+    "Direction générale de la gendarmerie", "GIGN", "Groupe d'intervention de la gendarmerie",
+    "Ecole de gendarmerie", "École de gendarmerie", "EOGN", "CNEFG", "CNICG", "CNISAG", "COMCYBERGEND",
+    // Police nationale
+    "Police nationale", "Police Nationale", "DGPN", "Direction générale de la Police nationale",
+    "Direction centrale de la police", "DCPAF", "Police aux frontières",
+    "DCPJ", "DCRFPN", "DRCPN", "DCSP", "DGSI", "RAID",
+    "ENSP", "ENP", "Ecole nationale de police", "École nationale de police",
+    "SNPS", "Service national de police scientifique",
+    // SAILMI et achats
+    "SAILMI", "Service de l'achat", "BAIP", "Bureau de l'achat", "BAM", "Bureau des achats mutualisés", "ECLIPM",
+    // SGAMI et préfectures
+    "SGAMI", "Secrétariat général pour l'administration du ministère de l'Intérieur",
+    "SATPN", "Services administratifs et techniques de la police",
+    "PREFECTURE DE POLICE", "Préfecture de Police", "Prefecture de police",
+    // Sécurité civile
+    "BSPP", "Brigade de sapeurs-pompiers", "DGSCGC", "Direction générale de la sécurité civile", "COGIC", "FORMISC",
+    // Autres entités MI
+    "DNUM", "Direction du numérique du ministère de l'Intérieur",
+    "ANTS", "Agence nationale des titres sécurisés", "ANTAI", "OFPRA", "OFII", "CNAPS", "IHEMI",
+];
+
+// Patterns d'acheteurs civils à exclure (marchés CPV 35* de collectivités)
+const CIVIL_BUYER_PATTERNS = [
+    // Collectivités territoriales
+    /^ville\s+(de\s+|d')/i,                    // Ville de X, Ville d'X
+    /^commune\s+(de\s+|d')/i,                  // Commune de X
+    /^mairie\s+(de\s+|d')/i,                   // Mairie de X
+    /^conseil\s+d[eé]partemental/i,            // Conseil départemental
+    /^conseil\s+r[eé]gional/i,                 // Conseil régional
+    /^d[eé]partement\s+(de\s+|d'|du\s+|des\s+)/i, // Département de X, Département des Landes
+    /^departement\s/i,                         // DEPARTEMENT (sans accent)
+    /^r[eé]gion\s/i,                           // Région X (sans "de")
+    /^communaut[eé]\s+(de\s+|d'|urbaine)/i,    // Communauté de communes/urbaine
+    /communaut[eé]\s+d'agglom/i,               // Communauté d'agglomération (n'importe où)
+    /^collectivit[eé]/i,                       // Collectivité (européenne, territoriale, etc.)
+    /m[eé]tropole/i,                           // Métropole (n'importe où dans le nom)
+    /^agglom[eé]ration/i,                      // Agglomération
+    /^syndicat\s+(intercommunal|mixte)/i,      // Syndicats intercommunaux
+    /^sivom|sivu|sictom/i,                     // SIVOM, SIVU, SICTOM
+
+    // Santé
+    /^ch\s|^chu\s|^chru\s|centre\s+hospitalier/i, // Hôpitaux
+    /^h[oô]pital/i,                            // Hôpital
+    /assistance\s+publique.*h[oô]pitaux/i,     // AP-HP, AP-HM (Assistance Publique Hôpitaux)
+    /^ap[-\s]?h[pm]/i,                         // AP-HP, AP-HM en abrégé
+    /^gip\s/i,                                 // GIP (Groupement d'Intérêt Public) - souvent santé
+    /^hus[-\s]/i,                              // HUS - Hôpitaux Universitaires de Strasbourg
+    /ght\s*\d/i,                               // GHT (Groupement Hospitalier de Territoire)
+
+    // Éducation
+    /^universit[eé]\s/i,                       // Universités
+    /^crous\s/i,                               // CROUS (Centres Régionaux des Œuvres Universitaires)
+    /^lyc[eé]e\s/i,                            // Lycées
+    /^coll[eè]ge\s/i,                          // Collèges
+    /^[eé]cole\s/i,                            // Écoles
+
+    // Logement social
+    /^office\s+(public\s+)?d'?hlm/i,           // OPH, Offices HLM
+    /^office\s+public\s+de\s+l'habitat/i,      // OPH
+    /^bailleur\s+social/i,                     // Bailleurs sociaux
+
+    // Organismes sociaux
+    /^caisse\s+d'allocations/i,                // CAF
+    /^cpam\s|caisse\s+primaire/i,              // CPAM
+    /^urssaf/i,                                // URSSAF
+    /^p[oô]le\s+emploi/i,                      // Pôle Emploi
+    /^france\s+travail/i,                      // France Travail (nouveau nom Pôle Emploi)
+
+    // Chambres consulaires et GIE
+    /^cci\s|^ccir\s|chambre\s+de\s+commerce/i, // CCI, CCIR
+    /^gie\s/i,                                 // GIE (Groupement d'Intérêt Économique)
+    /^cma\s|chambre\s+de\s+m[eé]tiers/i,       // Chambre de métiers
+
+    // Transport et infrastructures civiles
+    /^voies\s+navigables/i,                    // VNF - Voies navigables de France
+    /^sncf\s|^sncf$/i,                         // SNCF
+    /^ratp/i,                                  // RATP
+    /^centrale\s+d'achat/i,                    // Centrale d'Achat (du Transport Public, etc.)
+    /transport\s+public/i,                     // Transport public (n'importe où)
+
+    // Autres
+    /^sagem$/i,                                // SAGEM (civil)
+    /^edf\s|^edf$/i,                           // EDF
+    /^enedis/i,                                // Enedis
+    /^grdf/i,                                  // GRDF
+];
+
+// Division CPV 35 : Équipements de sécurité, défense, police, lutte incendie
+// https://simap.ted.europa.eu/cpv
+const DEFENSE_CPV_PREFIX = "35";
+
+// Codes CPV principaux de la division 35 (pour recherche API)
+// Ces codes sont assez longs pour éviter les faux positifs
+const DEFENSE_CPV_CODES = [
+    "35100000", // Équipements d'urgence et de sécurité
+    "35110000", // Équipements de lutte contre l'incendie
+    "35120000", // Systèmes et dispositifs de surveillance et de sécurité
+    "35200000", // Équipements de police et de défense
+    "35210000", // Cibles de tir
+    "35220000", // Équipement antiémeute
+    "35230000", // Menottes
+    "35240000", // Sirènes
+    "35250000", // Matériel d'identification
+    "35300000", // Armes, munitions et pièces associées
+    "35310000", // Armes diverses
+    "35320000", // Armes à feu
+    "35330000", // Munitions
+    "35400000", // Véhicules militaires et pièces associées
+    "35410000", // Véhicules militaires blindés
+    "35420000", // Pièces de véhicules militaires
+    "35500000", // Navires de guerre et pièces associées
+    "35600000", // Aéronefs militaires, missiles et engins spatiaux
+    "35700000", // Systèmes électroniques militaires
+    "35800000", // Équipement individuel et de soutien
+];
+
+// ============================================================================
+// BLACKLIST : Mots-clés à exclure pour filtrer le bruit
+// ============================================================================
+const BLACKLIST_KEYWORDS = [
+    'piscine', 'déchets', 'ordures ménagères', 'collecte des déchets', 'recyclage',
+    'espaces verts', 'jardinage', 'restauration scolaire', 'cantine',
+    'nettoyage locaux', 'ménage', 'blanchisserie', 'lingerie',
+    'voirie communale', 'éclairage public', 'assainissement', 'eau potable', 'chauffage urbain',
+    'médiathèque', 'bibliothèque', 'musée municipal', 'centre culturel',
+    'salle des fêtes', 'gymnase', 'stade', 'terrain de sport',
+];
+
+// Vérifier si un marché doit être exclu selon la blacklist
+const isBlacklisted = (title: string): boolean => {
+    if (!title) return false;
+    const lowerTitle = title.toLowerCase();
+    return BLACKLIST_KEYWORDS.some(keyword => lowerTitle.includes(keyword.toLowerCase()));
+};
+
+interface RawRecord {
+    idweb?: string;
+    objet?: string;
+    nomacheteur?: string;
+    datelimitereponse?: string;
+    datefindiffusion?: string; // Date de fin de diffusion (fallback si datelimitereponse est null)
+    dateparution?: string;
+    procedure_libelle?: string;
+    nature_libelle?: string;
+    famille_libelle?: string;
+    code_departement?: string | string[];
+    url_avis?: string;
+    type_marche?: string | string[];
+    perimetre?: string; // "National" ou "Européen" (JOUE)
+    // Structure imbriquée pour le CPV et autres données
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    donnees?: any;
+}
+
+// Parser donnees si c'est une string JSON
+const parseDonnees = (donnees: any): any => {
+    if (!donnees) return null;
+    if (typeof donnees === 'string') {
+        try {
+            return JSON.parse(donnees);
+        } catch {
+            return null;
+        }
+    }
+    return donnees;
+};
+
+// Recherche récursive profonde de CPV dans un objet JSON
+const findCpvRecursive = (obj: any, depth: number = 0): string | undefined => {
+    if (!obj || depth > 10) return undefined;
+    if (typeof obj === 'string') {
+        const cpvMatch = obj.match(/^(35\d{6})(?:\s|$|-)/);
+        if (cpvMatch) return cpvMatch[1];
+        return undefined;
+    }
+    if (Array.isArray(obj)) {
+        for (const item of obj) {
+            const found = findCpvRecursive(item, depth + 1);
+            if (found) return found;
+        }
+        return undefined;
+    }
+    if (typeof obj === 'object') {
+        const cpvKeys = ['PRINCIPAL', 'principal', 'cpv', 'CPV', 'code_cpv', 'ItemClassificationCode', 'cbc:ItemClassificationCode'];
+        for (const key of cpvKeys) {
+            if (obj[key]) {
+                const value = obj[key];
+                if (typeof value === 'string') {
+                    const cpvMatch = value.match(/^(35\d{6})/);
+                    if (cpvMatch) return cpvMatch[1];
+                } else {
+                    const found = findCpvRecursive(value, depth + 1);
+                    if (found) return found;
+                }
+            }
+        }
+        for (const key of Object.keys(obj)) {
+            const found = findCpvRecursive(obj[key], depth + 1);
+            if (found) return found;
+        }
+    }
+    return undefined;
+};
+
+// Extraire le code CPV principal d'un record
+const extractCpv = (r: RawRecord): string | undefined => {
+    const donnees = parseDonnees(r.donnees);
+    if (!donnees) return undefined;
+
+    // 1. Ancien format BOAMP : OBJET.CPV.PRINCIPAL
+    const globalCpv = donnees.OBJET?.CPV?.PRINCIPAL;
+    if (globalCpv) {
+        const match = String(globalCpv).match(/^(\d{8})/);
+        if (match) return match[1];
+    }
+
+    // 2. Ancien format - CPV du premier lot
+    const lots = donnees.OBJET?.LOTS?.LOT;
+    if (Array.isArray(lots) && lots.length > 0 && lots[0]?.CPV?.PRINCIPAL) {
+        const match = String(lots[0].CPV.PRINCIPAL).match(/^(\d{8})/);
+        if (match) return match[1];
+    }
+
+    // 3. Nouveau format eForms : ContractNotice.cac:ProcurementProject...
+    try {
+        const eforms = donnees.EFORMS;
+        if (eforms?.ContractNotice) {
+            const contractNotice = eforms.ContractNotice;
+            const mainProject = contractNotice['cac:ProcurementProject'];
+            if (mainProject) {
+                const classification = mainProject['cac:MainCommodityClassification'];
+                const cpvCode = classification?.['cbc:ItemClassificationCode'];
+                if (cpvCode) {
+                    const match = String(cpvCode).match(/^(\d{8})/);
+                    if (match) return match[1];
+                }
+            }
+            const procurementLot = contractNotice['cac:ProcurementProjectLot'];
+            if (procurementLot) {
+                const lotProject = procurementLot['cac:ProcurementProject'];
+                if (lotProject) {
+                    const classification = lotProject['cac:MainCommodityClassification'];
+                    const cpvCode = classification?.['cbc:ItemClassificationCode'];
+                    if (cpvCode) {
+                        const match = String(cpvCode).match(/^(\d{8})/);
+                        if (match) return match[1];
+                    }
+                }
+            }
+        }
+    } catch {
+        // Structure inattendue
+    }
+
+    // 4. Recherche profonde récursive pour les cas edge (CPV 35* défense/sécurité)
+    const deepCpv = findCpvRecursive(donnees);
+    if (deepCpv) return deepCpv;
+
+    return undefined;
+};
+
+// Vérifier si un CPV appartient à la division 35 (Défense/Sécurité)
+const isDefenseCpv = (cpv: string | undefined): boolean => {
+    if (!cpv) return false;
+    return cpv.startsWith(DEFENSE_CPV_PREFIX);
+};
+
+// Vérifier si un acheteur est civil (collectivité, hôpital, université, etc.)
+const isCivilBuyer = (buyerName: string): boolean => {
+    if (!buyerName) return false;
+    const normalizedName = buyerName.trim();
+    return CIVIL_BUYER_PATTERNS.some(pattern => pattern.test(normalizedName));
+};
+
+// Vérifier si un acheteur est un acheteur défense/intérieur ciblé
+const isDefenseBuyer = (buyerName: string): boolean => {
+    if (!buyerName) return false;
+    const upperName = buyerName.toUpperCase();
+
+    // Vérifier les préfixes
+    const allPrefixes = [...BUYER_PREFIXES.defense, ...BUYER_PREFIXES.interior];
+    for (const prefix of allPrefixes) {
+        if (upperName.startsWith(prefix.toUpperCase())) return true;
+    }
+
+    // Vérifier les patterns
+    for (const pattern of BUYER_PATTERNS) {
+        if (upperName.includes(pattern.toUpperCase())) return true;
+    }
+
+    return false;
+};
+
+// Vérifier si le marché est publié au JOUE (Journal Officiel de l'UE)
+const isJOUE = (r: RawRecord): boolean => {
+    // Le champ perimetre indique "Européen" pour les marchés JOUE
+    if (r.perimetre?.toLowerCase().includes('europ')) return true;
+
+    // Vérifier aussi dans donnees si c'est un eForms (format européen)
+    const donnees = parseDonnees(r.donnees);
+    if (donnees?.EFORMS) return true;
+
+    return false;
+};
+
+// Extraire la nature du marché (Fournitures, Services, Travaux)
+const extractMarketNature = (r: RawRecord): MarketNature | undefined => {
+    // type_marche est un tableau de strings (ex: ["FOURNITURES"])
+    if (Array.isArray(r.type_marche) && r.type_marche.length > 0) {
+        const typeMarche = r.type_marche[0].toLowerCase();
+        if (typeMarche.includes('fourniture')) return 'fournitures';
+        if (typeMarche.includes('service')) return 'services';
+        if (typeMarche.includes('travaux') || typeMarche.includes('travail')) return 'travaux';
+    }
+
+    // Fallback sur type_marche string (ancien format)
+    if (typeof r.type_marche === 'string') {
+        const typeMarche = r.type_marche.toLowerCase();
+        if (typeMarche.includes('fourniture')) return 'fournitures';
+        if (typeMarche.includes('service')) return 'services';
+        if (typeMarche.includes('travaux')) return 'travaux';
+    }
+
+    // Fallback sur nature_libelle (rarement utile, c'est "Avis de marché" généralement)
+    const nature = (typeof r.nature_libelle === 'string' ? r.nature_libelle : '').toLowerCase();
+    if (nature.includes('fourniture')) return 'fournitures';
+    if (nature.includes('service')) return 'services';
+    if (nature.includes('travaux') || nature.includes('travail')) return 'travaux';
+
+    return undefined;
+};
+
+// Extraire le montant estimé et calculer la fourchette
+const extractAmountRange = (r: RawRecord): { amount?: number; range?: AmountRange } => {
+    const donnees = parseDonnees(r.donnees);
+    if (!donnees) return {};
+
+    let amount: number | undefined;
+
+    // Ancien format BOAMP : OBJET.VALEUR_TOTALE ou CARACTERISTIQUES.VALEUR_TOTALE_MARCHE
+    if (donnees.OBJET?.VALEUR_TOTALE) {
+        amount = parseFloat(donnees.OBJET.VALEUR_TOTALE);
+    } else if (donnees.CARACTERISTIQUES?.VALEUR_TOTALE_MARCHE) {
+        amount = parseFloat(donnees.CARACTERISTIQUES.VALEUR_TOTALE_MARCHE);
+    }
+
+    // Nouveau format eForms
+    if (!amount && donnees.EFORMS?.ContractNotice) {
+        const project = donnees.EFORMS.ContractNotice['cac:ProcurementProject'];
+        if (project?.['cac:RequestedTenderTotal']?.['cbc:EstimatedOverallContractAmount']) {
+            amount = parseFloat(project['cac:RequestedTenderTotal']['cbc:EstimatedOverallContractAmount']);
+        }
+    }
+
+    if (!amount || isNaN(amount)) return {};
+
+    // Calculer la fourchette selon les seuils marchés publics
+    let range: AmountRange;
+    if (amount < 40000) {
+        range = 'small';      // < 40k€ - MAPA simplifié
+    } else if (amount < 90000) {
+        range = 'medium';     // 40k-90k€ - MAPA
+    } else if (amount < 221000) {
+        range = 'large';      // 90k-221k€ - Approche seuil européen
+    } else {
+        range = 'xlarge';     // > 221k€ - Marchés formalisés
+    }
+
+    return { amount, range };
+};
+
+// Extraire la date limite de remise des offres depuis donnees
+const extractDeadline = (r: RawRecord): string | undefined => {
+    // 1. Champ direct datelimitereponse (priorité)
+    if (r.datelimitereponse) return r.datelimitereponse;
+
+    const donnees = parseDonnees(r.donnees);
+    if (!donnees) return undefined;
+
+    // 2. Ancien format BOAMP : CONDITION_DELAI.RECEPT_OFFRES
+    if (donnees.CONDITION_DELAI?.RECEPT_OFFRES) {
+        return donnees.CONDITION_DELAI.RECEPT_OFFRES;
+    }
+
+    // 3. Nouveau format eForms : EFORMS.ContractNotice...
+    try {
+        const eforms = donnees.EFORMS;
+        if (eforms?.ContractNotice) {
+            const contractNotice = eforms.ContractNotice;
+            const procurementLot = contractNotice['cac:ProcurementProjectLot'];
+
+            if (procurementLot) {
+                const tenderingProcess = procurementLot['cac:TenderingProcess'];
+
+                if (tenderingProcess) {
+                    // ParticipationRequestReceptionPeriod (candidatures)
+                    const participationPeriod = tenderingProcess['cac:ParticipationRequestReceptionPeriod'];
+                    if (participationPeriod?.['cbc:EndDate']) {
+                        const endDate = String(participationPeriod['cbc:EndDate']).replace('Z', '');
+                        const endTime = participationPeriod['cbc:EndTime']
+                            ? String(participationPeriod['cbc:EndTime']).replace('Z', '')
+                            : '12:00:00';
+                        return `${endDate}T${endTime}`;
+                    }
+
+                    // TenderSubmissionDeadlinePeriod (offres)
+                    const submissionPeriod = tenderingProcess['cac:TenderSubmissionDeadlinePeriod'];
+                    if (submissionPeriod?.['cbc:EndDate']) {
+                        const endDate = String(submissionPeriod['cbc:EndDate']).replace('Z', '');
+                        const endTime = submissionPeriod['cbc:EndTime']
+                            ? String(submissionPeriod['cbc:EndTime']).replace('Z', '')
+                            : '12:00:00';
+                        return `${endDate}T${endTime}`;
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Erreur extraction date eForms:', e);
+    }
+
+    return undefined;
+};
+
+// Mapper un record API vers notre type Tender
+const mapToTender = (r: RawRecord): Tender => {
+    const id = r.idweb || Math.random().toString(36).substring(2, 11);
+    const cpv = extractCpv(r);
+    const deadline = extractDeadline(r);
+    const marketNature = extractMarketNature(r);
+    const { amount, range } = extractAmountRange(r);
+    const joue = isJOUE(r);
+
+    return {
+        id,
+        title: r.objet || 'Sans objet',
+        buyer: {
+            name: r.nomacheteur || 'Acheteur inconnu',
+            department: Array.isArray(r.code_departement) ? r.code_departement[0] : r.code_departement,
+            type: Array.isArray(r.type_marche) ? r.type_marche[0] : r.type_marche
+        },
+        publicationDate: r.dateparution || new Date().toISOString(),
+        deadlineDate: deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        estimatedAmount: amount || 0,
+        procedureType: r.procedure_libelle || 'Non spécifié',
+        description: `Marché public de ${r.nature_libelle || 'nature inconnue'}. Famille: ${r.famille_libelle || 'Non spécifiée'}.`,
+        sectors: [r.famille_libelle || 'Autre'],
+        urgencyLevel: 'normal',
+        boampUrl: r.url_avis || `https://www.boamp.fr/pages/avis/?q=idweb:"${id}"`,
+        score: Math.floor(Math.random() * 20) + 80,
+        cpv,
+        isDefenseEquipment: isDefenseCpv(cpv),
+        isJOUE: joue,
+        marketNature,
+        amountRange: range,
+        source: 'BOAMP'
+    };
+};
+
+// Construire la clause WHERE pour les acheteurs ciblés
+const buildBuyerWhereClause = (): string => {
+    const conditions: string[] = [];
+
+    // Préfixes d'acheteurs (startswith)
+    const allPrefixes = [...BUYER_PREFIXES.defense, ...BUYER_PREFIXES.interior];
+    const prefixConditions = allPrefixes.map(p => `startswith(nomacheteur, "${p}")`);
+    conditions.push(...prefixConditions);
+
+    // Patterns d'acheteurs (search pour match partiel)
+    const patternConditions = BUYER_PATTERNS.map(p => `search(nomacheteur, "${p}")`);
+    conditions.push(...patternConditions);
+
+    // Combiner toutes les conditions acheteur
+    const buyerClause = conditions.join(" OR ");
+
+    return `(${buyerClause})`;
+};
+
+// Fonction générique pour récupérer des records avec pagination
+const fetchRecords = async (whereClause: string, maxRecords: number = 1000, label: string = ""): Promise<RawRecord[]> => {
+    const allRecords: RawRecord[] = [];
+    let offset = 0;
+    const limit = 100;
+    let keepFetching = true;
+
+    while (keepFetching) {
+        const url = new URL(API_ENDPOINT);
+        url.searchParams.set("select", "idweb,objet,nomacheteur,datelimitereponse,datefindiffusion,dateparution,donnees,procedure_libelle,nature_libelle,famille_libelle,code_departement,url_avis,type_marche,perimetre");
+        url.searchParams.set("where", whereClause);
+        url.searchParams.set("order_by", "dateparution DESC");
+        url.searchParams.set("limit", limit.toString());
+        url.searchParams.set("offset", offset.toString());
+
+        console.log(`BOAMP ${label}: Fetching offset ${offset}...`);
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`BOAMP API Error ${response.status}:`, errorText.substring(0, 500));
+            throw new Error(`Erreur API BOAMP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const results: RawRecord[] = data.results || [];
+
+        console.log(`BOAMP ${label}: ${results.length} résultats à l'offset ${offset}`);
+        allRecords.push(...results);
+
+        if (results.length < limit) {
+            keepFetching = false;
+        } else {
+            offset += limit;
+            if (offset >= maxRecords) keepFetching = false;
+        }
+    }
+
+    return allRecords;
+};
+
+// ============================================================================
+// FONCTION INTERNE : Appelle directement l'API BOAMP (utilisée par l'API Route)
+// ============================================================================
+export async function fetchDefenseTendersFromAPI(): Promise<Tender[]> {
+    console.log('BOAMP API: Stratégie "Parallel Dragnet" activée');
+    console.log('BOAMP API: Nombre de patterns acheteurs:', BUYER_PATTERNS.length);
+
+    try {
+        // Query A: Buyer Dragnet - Recherche par nom d'acheteur
+        const buyerWhereClause = buildBuyerWhereClause();
+        // Query B: Equipment Dragnet - Recherche par CPV 35* (défense/sécurité)
+        const cpvConditions = DEFENSE_CPV_CODES.map(code => `search(donnees, "${code}")`);
+        const cpvWhereClause = `(${cpvConditions.join(" OR ")})`;
+
+        // Exécution en parallèle pour maximiser les performances
+        console.log('BOAMP: Lancement des requêtes A (Acheteurs) et B (CPV) en parallèle...');
+        const [buyerRecords, cpvRecords] = await Promise.all([
+            fetchRecords(buyerWhereClause, 1000, "[Query A: Acheteurs]"),
+            fetchRecords(cpvWhereClause, 500, "[Query B: CPV 35*]")
+        ]);
+
+        console.log(`BOAMP: Query A (Acheteurs) → ${buyerRecords.length} marchés`);
+        console.log(`BOAMP: Query B (CPV 35*) → ${cpvRecords.length} marchés`);
+
+        // Fusion et déduplication
+        const seenIds = new Set<string>();
+        const allRecords: RawRecord[] = [];
+        for (const r of buyerRecords) {
+            if (r.idweb && !seenIds.has(r.idweb)) {
+                seenIds.add(r.idweb);
+                allRecords.push(r);
+            }
+        }
+        for (const r of cpvRecords) {
+            if (r.idweb && !seenIds.has(r.idweb)) {
+                seenIds.add(r.idweb);
+                allRecords.push(r);
+            }
+        }
+        console.log(`BOAMP: ${allRecords.length} marchés après fusion et déduplication`);
+
+        const cpvRecordIds = new Set(cpvRecords.map(r => r.idweb));
+        const buyerRecordIds = new Set(buyerRecords.map(r => r.idweb));
+
+        // Filtrage client-side strict (The Sieve)
+        let excludedBlacklist = 0;
+        let excludedCivil = 0;
+
+        const tenders = allRecords
+            .filter(r => {
+                const buyerName = r.nomacheteur || '';
+                const title = r.objet || '';
+                const fromBuyerQuery = buyerRecordIds.has(r.idweb);
+                const fromCpvQuery = cpvRecordIds.has(r.idweb);
+
+                // 1. Appliquer la blacklist sur l'objet du marché
+                if (isBlacklisted(title)) {
+                    excludedBlacklist++;
+                    return false;
+                }
+                // 2. Si trouvé via Query A (acheteur ciblé) → garder
+                if (fromBuyerQuery) return true;
+                // 3. Si trouvé via Query B (CPV 35*) → exclure si acheteur civil
+                if (fromCpvQuery) {
+                    if (isCivilBuyer(buyerName)) {
+                        excludedCivil++;
+                        return false;
+                    }
+                    return true;
+                }
+                return true;
+            })
+            .map(r => {
+                const tender = mapToTender(r);
+                if (cpvRecordIds.has(r.idweb)) {
+                    tender.isDefenseEquipment = true;
+                }
+                return tender;
+            });
+
+        console.log(`BOAMP: Filtrage - ${excludedBlacklist} exclus (blacklist), ${excludedCivil} exclus (acheteurs civils)`);
+
+        // Calcul urgence + filtrage des marchés clôturés
+        const now = Date.now();
+        const tendersWithUrgency = tenders
+            .map(t => {
+                const deadline = new Date(t.deadlineDate).getTime();
+                const daysLeft = (deadline - now) / (1000 * 60 * 60 * 24);
+                let urgency: 'normal' | 'urgent' | 'critical' = 'normal';
+                if (daysLeft <= 2) urgency = 'critical';
+                else if (daysLeft <= 7) urgency = 'urgent';
+                return { ...t, urgencyLevel: urgency, daysLeft };
+            })
+            .filter(t => t.daysLeft >= 0)
+            .map(({ daysLeft, ...rest }) => rest);
+
+        console.log(`BOAMP: ${tendersWithUrgency.length} marchés actifs (deadline non passée)`);
+
+        return tendersWithUrgency.sort((a, b) => {
+            if (a.isDefenseEquipment && !b.isDefenseEquipment) return -1;
+            if (!a.isDefenseEquipment && b.isDefenseEquipment) return 1;
+            return new Date(b.publicationDate).getTime() - new Date(a.publicationDate).getTime();
+        });
+
+    } catch (error) {
+        console.error("Erreur fetchDefenseTenders:", error);
+        return [];
+    }
+}
+
+// ============================================================================
+// FONCTION PUBLIQUE : Appelle l'API Route avec cache Redis
+// ============================================================================
+export async function fetchDefenseTenders(): Promise<Tender[]> {
+    // En environnement serveur (API Route), appeler directement l'API BOAMP
+    if (typeof window === 'undefined') {
+        console.log('BOAMP: Appel direct (serveur)');
+        return fetchDefenseTendersFromAPI();
+    }
+
+    // En environnement client, passer par l'API Route (avec cache Redis)
+    try {
+        console.log('BOAMP: Appel via API Route /api/tenders');
+        const res = await fetch('/api/tenders');
+
+        if (!res.ok) {
+            throw new Error(`API Route error: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        // Log cache status
+        const cacheStatus = res.headers.get('X-Cache') || 'UNKNOWN';
+        console.log(`BOAMP: ${data.count} marchés récupérés (cache: ${cacheStatus}, source: ${data.source})`);
+
+        return data.tenders || [];
+    } catch (error) {
+        // Fallback: appel direct si l'API Route échoue
+        console.warn('BOAMP: API Route failed, fallback to direct API call', error);
+        return fetchDefenseTendersFromAPI();
+    }
+}
+
+// Export pour permettre un filtrage additionnel par CPV côté appelant si besoin
+export { isDefenseCpv, DEFENSE_CPV_PREFIX };
+
+// ============================================================================
+// NOUVELLE SECTION : Requêtes groupées par tutelle pour page Acheteurs
+// ============================================================================
+
+const ACHETEURS_PAR_TUTELLE: Record<string, string[]> = {
+    'MINARM': [
+        'Ministère des armées', 'Ministère des Armées', 'MINARM',
+        'Agence Ministérielle pour l\'Intelligence Artificielle', 'AMIAD', 'ECPAD',
+        'Cercle National des Armées', 'Institution nationale des Invalides',
+        'Musée de l\'Armée', 'Musée de l\'Air', 'ONACVG', 'Office national des combattants',
+    ],
+    'DGA': [
+        'Direction générale de l\'armement', 'DGA', 'Agence du numérique de défense',
+        'Division achats', 'DA-BA', 'DA-BD', 'DA-BS', 'DA-BZ', 'DA-IDFN', 'DA-SE', 'DA-SO',
+        'SCAT', 'DGA Essais', 'DGA Techniques', 'DGA Maîtrise', 'DGA Information stratégique',
+    ],
+    'DMAé': ['Direction de la maintenance aéronautique', 'DMAé', 'SSAM', 'Structure Spécialisée d\'Achat'],
+    'Marine': [
+        'Marine nationale', 'BCRM', 'Base navale', 'Service hydrographique et océanographique',
+        'SHOM', 'Service de soutien de la flotte', 'SSF', 'DSSF', 'Ecole Navale', 'Musée national de la Marine',
+    ],
+    'Terre': [
+        'Armée de terre', 'Armée de Terre', 'Section Technique de l\'Armée de Terre', 'STAT',
+        'Service de la Maintenance Industrielle Terrestre', 'SMITer', 'BSMAT',
+        'Légion étrangère', 'COMLE', 'Saint-Cyr', 'Coëtquidan',
+    ],
+    'Air': [
+        'Armée de l\'air', 'Armée de l\'Air', 'ECOLE DE L\'AIR', 'Base aérienne',
+        'SERVICE INDUSTRIEL DE L\'AÉRONAUTIQUE', 'SIAé', 'AIA', 'Atelier Industriel de l\'Aéronautique',
+    ],
+    'SCA': [
+        'Service du Commissariat des Armées', 'SCA', 'Groupement de soutien de la Base de Défense',
+        'Groupement de Soutien de la Base de Défense', 'GSBdD', 'Plate-forme commissariat', 'PFC',
+        'Cercle de la base de défense', 'Cercle mixte', 'CBDD', 'CMBDD', 'CIEC',
+        'Centre interarmées du soutien', 'Economat des armées', 'DICOM', 'Direction du commissariat', 'DIRCOM',
+    ],
+    'SID': [
+        'Service d\'Infrastructure de la Défense', 'Service d\'infrastructure de la défense',
+        'SID', 'ESID', 'DID', 'Direction d\'infrastructure', 'CETID', 'Mandat de maîtrise d\'ouvrage',
+    ],
+    'SSA': ['Service de Santé des Armées', 'Service de santé des armées', 'SSA', 'DAPSA', 'Direction des Approvisionnements en produits de santé'],
+    'SEO': ['Service de l\'Énergie Opérationnelle', 'SEO', 'CSTA', 'Base Pétrolière Interarmées', 'BPIA'],
+    'SIMU': ['Service interarmées des munitions', 'SIMU'],
+    'SIMMT': ['Structure Intégrée du Maintien en condition opérationnelle', 'SIMMT'],
+    'Gendarmerie': [
+        'Gendarmerie nationale', 'Gendarmerie Nationale', 'DGGN', 'école de gendarmerie',
+        'Ecole de gendarmerie', 'CNEFG', 'CNICG', 'CNISAG', 'EOGN', 'GIGN',
+    ],
+    'SGA': [
+        'Secrétariat général pour l\'administration', 'SGA', 'Service Historique de la Défense', 'SHD',
+        'Direction du Service National', 'DSNJ', 'ESN', 'Établissement du service national',
+        'Centre Ministériel de Gestion', 'Défense mobilité',
+    ],
+    'Enseignement': [
+        'ENSTA', 'Ecole Polytechnique', 'École Polytechnique', 'Institut Polytechnique de Paris',
+        'ISAE', 'Institut supérieur de l\'aéronautique',
+    ],
+};
+
+const ACHETEURS_PAR_TUTELLE_INTERIEUR: Record<string, string[]> = {
+    'GN': [
+        'Gendarmerie nationale', 'Gendarmerie Nationale', 'DGGN', 'Direction générale de la gendarmerie',
+        'Direction des personnels militaires de la gendarmerie', 'COMCYBERGEND', 'Commandement de la gendarmerie',
+        'GIGN', 'Groupe d\'intervention de la gendarmerie', 'école de gendarmerie', 'Ecole de gendarmerie',
+        'EOGN', 'CNEFG', 'CNICG', 'CNISAG', 'Région de gendarmerie', 'Groupement de gendarmerie',
+    ],
+    'DGPN': [
+        'Direction générale de la Police nationale', 'DGPN', 'Police nationale', 'Police Nationale',
+        'Direction centrale de la police', 'DCPAF', 'Police aux frontières', 'DCRFPN', 'DRCPN', 'DCSP', 'DCPJ',
+        'DGSI', 'RAID', 'Ecole nationale de police', 'École nationale de police', 'ENSP', 'ENP',
+        'SNPS', 'Service national de police scientifique',
+    ],
+    'SAILMI': [
+        'SAILMI', 'Service de l\'achat', 'innovation, de la logistique du ministère de l\'Intérieur',
+        'BAIP', 'Bureau de l\'achat', 'BAM', 'Bureau des achats mutualisés', 'BAN', 'Bureau des achats nationaux',
+        'ECLIPM', 'Établissement central logistique',
+    ],
+    'SATPN': ['SATPN', 'Services administratifs et techniques de la police'],
+    'SGAMI': ['SGAMI', 'Secrétariat général pour l\'administration du ministère de l\'Intérieur'],
+    'AUTRE_MI': [
+        'Préfecture de police', 'Prefecture de police', 'BSPP', 'Brigade de sapeurs-pompiers',
+        'DNUM', 'Direction du numérique du ministère de l\'Intérieur', 'DGSCGC',
+        'Direction générale de la sécurité civile', 'COGIC', 'FORMISC', 'ANTS',
+        'Agence nationale des titres sécurisés', 'ANTAI', 'OFPRA', 'OFII', 'CNAPS', 'IHEMI',
+    ],
+};
+
+export interface MarcheBoamp {
+    id: string;
+    titre: string;
+    acheteur: string;
+    acheteurNormalise: string;
+    dateLimite: string;
+    datePublication: string;
+    type: string;
+    procedure: string;
+    url: string | null;
+    tutelleGroupe: string;
+    joursRestants: number;
+}
+
+export function normalizeString(str: string): string {
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function transformRecordForAcheteurs(record: any, tutelle: string): MarcheBoamp {
+    const fields = record.fields || record;
+    const dateLimite = fields.datelimitereponse || fields.datefindiffusion;
+    const now = new Date();
+    const limite = dateLimite ? new Date(dateLimite) : null;
+    const joursRestants = limite ? Math.ceil((limite.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+
+    return {
+        id: fields.idweb || record.recordid || Math.random().toString(36).substring(7),
+        titre: fields.objet || 'Sans titre',
+        acheteur: fields.nomacheteur || '',
+        acheteurNormalise: normalizeString(fields.nomacheteur || ''),
+        dateLimite: dateLimite || '',
+        datePublication: fields.dateparution || '',
+        type: fields.type_marche ? (Array.isArray(fields.type_marche) ? fields.type_marche[0] : fields.type_marche) : 'Non précisé',
+        procedure: fields.procedure_libelle || 'Non précisée',
+        url: fields.idweb ? `https://www.boamp.fr/avis/detail/${fields.idweb}` : null,
+        tutelleGroupe: tutelle,
+        joursRestants,
+    };
+}
+
+function detectTutelleFromAcheteur(nomAcheteur: string): string {
+    const nom = nomAcheteur.toLowerCase();
+    if (nom.includes('dga') || nom.includes('direction générale de l\'armement')) return 'DGA';
+    if (nom.includes('sca') || nom.includes('commissariat des armées') || nom.includes('gsbdd') || nom.includes('pfc')) return 'SCA';
+    if (nom.includes('sid') || nom.includes('esid') || nom.includes('infrastructure de la défense')) return 'SID';
+    if (nom.includes('ssa') || nom.includes('santé des armées')) return 'SSA';
+    if (nom.includes('seo') || nom.includes('énergie opérationnelle')) return 'SEO';
+    if (nom.includes('siaé') || nom.includes('aia') || nom.includes('aéronautique')) return 'Air';
+    if (nom.includes('dmaé') || nom.includes('maintenance aéronautique')) return 'DMAé';
+    if (nom.includes('marine') || nom.includes('bcrm') || nom.includes('ssf') || nom.includes('shom')) return 'Marine';
+    if (nom.includes('armée de terre') || nom.includes('stat') || nom.includes('smiter') || nom.includes('bsmat')) return 'Terre';
+    if (nom.includes('gendarmerie') || nom.includes('dggn') || nom.includes('gign')) return 'Gendarmerie';
+    if (nom.includes('simmt')) return 'SIMMT';
+    if (nom.includes('simu')) return 'SIMU';
+    if (nom.includes('sga') || nom.includes('shd') || nom.includes('dsnj')) return 'SGA';
+    if (nom.includes('polytechnique') || nom.includes('ensta') || nom.includes('isae')) return 'Enseignement';
+    return 'MINARM';
+}
+
+export async function getAllMarchesDefense(): Promise<MarcheBoamp[]> {
+    console.log(`[BOAMP-DEF] Début récupération avec approche tutelle + CPV 35*`);
+    const allMarches: MarcheBoamp[] = [];
+
+    for (const [tutelle, termes] of Object.entries(ACHETEURS_PAR_TUTELLE)) {
+        try {
+            const searchConditions = termes.map(t => `search(nomacheteur, "${t}")`);
+            const whereClause = `(${searchConditions.join(' OR ')}) AND (datelimitereponse > now() OR datefindiffusion > now())`;
+            const records = await fetchRecords(whereClause, 200, `[${tutelle}]`);
+            console.log(`[BOAMP-DEF] ${tutelle}: ${records.length} marchés`);
+            for (const r of records) {
+                const marche = transformRecordForAcheteurs({ fields: r }, tutelle);
+                if (marche.joursRestants > 0) allMarches.push(marche);
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+            console.error(`[BOAMP-DEF] Erreur pour tutelle ${tutelle}:`, error);
+        }
+    }
+
+    // Requête CPV 35*
+    try {
+        const cpvConditions = DEFENSE_CPV_CODES.map(code => `search(donnees, "${code}")`);
+        const cpvWhereClause = `(${cpvConditions.join(' OR ')}) AND (datelimitereponse > now() OR datefindiffusion > now())`;
+        const cpvRecords = await fetchRecords(cpvWhereClause, 500, '[CPV 35*]');
+        console.log(`[BOAMP-DEF] CPV 35*: ${cpvRecords.length} marchés`);
+        for (const r of cpvRecords) {
+            if (!isCivilBuyer(r.nomacheteur || '')) {
+                const tutelle = detectTutelleFromAcheteur(r.nomacheteur || '');
+                const marche = transformRecordForAcheteurs({ fields: r }, tutelle);
+                if (marche.joursRestants > 0) allMarches.push(marche);
+            }
+        }
+    } catch (error) {
+        console.error(`[BOAMP-DEF] Erreur CPV 35*:`, error);
+    }
+
+    // Dédupliquer
+    const unique = new Map<string, MarcheBoamp>();
+    allMarches.forEach(m => { if (!unique.has(m.id)) unique.set(m.id, m); });
+    const result = Array.from(unique.values());
+    console.log(`[BOAMP-DEF] Total: ${result.length} marchés uniques après déduplication`);
+    return result;
+}
+
+function detectTutelleInterieurFromAcheteur(nomAcheteur: string): string {
+    const nom = nomAcheteur.toLowerCase();
+    if (nom.includes('gendarmerie') || nom.includes('dggn') || nom.includes('gign')) return 'GN';
+    if (nom.includes('police') || nom.includes('dgpn') || nom.includes('dcpaf') || nom.includes('dcpj') || nom.includes('dgsi') || nom.includes('raid')) return 'DGPN';
+    if (nom.includes('sailmi')) return 'SAILMI';
+    if (nom.includes('sgami')) return 'SGAMI';
+    if (nom.includes('satpn')) return 'SATPN';
+    if (nom.includes('préfecture de police') || nom.includes('bspp') || nom.includes('sapeurs-pompiers')) return 'AUTRE_MI';
+    if (nom.includes('sécurité civile') || nom.includes('formisc') || nom.includes('cogic')) return 'AUTRE_MI';
+    if (nom.includes('ants') || nom.includes('antai') || nom.includes('ofpra') || nom.includes('ofii')) return 'AUTRE_MI';
+    return 'AUTRE_MI';
+}
+
+export async function getAllMarchesInterieur(): Promise<MarcheBoamp[]> {
+    console.log(`[BOAMP-INT] Début récupération avec approche tutelle`);
+    const allMarches: MarcheBoamp[] = [];
+
+    for (const [tutelle, termes] of Object.entries(ACHETEURS_PAR_TUTELLE_INTERIEUR)) {
+        try {
+            const searchConditions = termes.map(t => `search(nomacheteur, "${t}")`);
+            const whereClause = `(${searchConditions.join(' OR ')}) AND (datelimitereponse > now() OR datefindiffusion > now())`;
+            const records = await fetchRecords(whereClause, 200, `[${tutelle}]`);
+            console.log(`[BOAMP-INT] ${tutelle}: ${records.length} marchés`);
+            for (const r of records) {
+                const marche = transformRecordForAcheteurs({ fields: r }, tutelle);
+                if (marche.joursRestants > 0) allMarches.push(marche);
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+            console.error(`[BOAMP-INT] Erreur pour tutelle ${tutelle}:`, error);
+        }
+    }
+
+    const unique = new Map<string, MarcheBoamp>();
+    allMarches.forEach(m => { if (!unique.has(m.id)) unique.set(m.id, m); });
+    const result = Array.from(unique.values());
+    console.log(`[BOAMP-INT] Total: ${result.length} marchés uniques après déduplication`);
+    return result;
+}
+
+export function groupMarchesByAcheteur(marches: MarcheBoamp[]): Record<string, MarcheBoamp[]> {
+    const groups: Record<string, MarcheBoamp[]> = {};
+    marches.forEach(m => {
+        const key = m.acheteurNormalise;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+    return groups;
+}
+
+export function findMarchesForAcheteur(
+    acheteur: { nom: string; code: string },
+    marchesByAcheteur: Record<string, MarcheBoamp[]>
+): MarcheBoamp[] {
+    const nomNorm = normalizeString(acheteur.nom);
+    const codeNorm = normalizeString(acheteur.code);
+    const matched: MarcheBoamp[] = [];
+
+    Object.entries(marchesByAcheteur).forEach(([key, marches]) => {
+        if (key.includes(nomNorm) || nomNorm.includes(key) || key.includes(codeNorm) || (codeNorm.length > 2 && key.includes(codeNorm))) {
+            matched.push(...marches);
+        }
+    });
+
+    const unique = new Map<string, MarcheBoamp>();
+    matched.forEach(m => unique.set(m.id, m));
+    return Array.from(unique.values()).sort((a, b) => a.joursRestants - b.joursRestants);
+}
+
+/**
+ * Trouve l'ID d'un acheteur à partir du nom normalisé d'un marché
+ */
+export function findAcheteurIdByName(
+    acheteurNom: string,
+    acheteurs: { id: string; nom: string; code: string }[]
+): string | undefined {
+    const nomNorm = normalizeString(acheteurNom);
+
+    for (const acheteur of acheteurs) {
+        const acheteurNomNorm = normalizeString(acheteur.nom);
+        const acheteurCodeNorm = normalizeString(acheteur.code);
+
+        // Match si le nom ou le code est contenu
+        if (nomNorm.includes(acheteurNomNorm) || acheteurNomNorm.includes(nomNorm) ||
+            (acheteurCodeNorm.length > 2 && nomNorm.includes(acheteurCodeNorm))) {
+            return acheteur.id;
+        }
+    }
+
+    return undefined;
+}

@@ -1,0 +1,69 @@
+name: Scrape PLACE Daily
+
+on:
+  # Exécution 2x par jour pour capturer les marchés publiés à différentes heures
+  # 12h UTC = 13h Paris (marchés du matin)
+  # 18h UTC = 19h Paris (marchés de l'après-midi)
+  schedule:
+    - cron: '0 12 * * *'
+    - cron: '0 18 * * *'
+
+  # Permet l'exécution manuelle depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60 # 2 ministères x 10 jours x ~2min = ~40min max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Puppeteer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2t64
+
+      - name: Run PLACE scraper MINARM (Ministère des Armées)
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: npx tsx scripts/scrape-place.ts
+
+      - name: Pause entre les scrapers (5s)
+        run: sleep 5
+
+      - name: Run PLACE scraper MININT (Ministère de l'Intérieur)
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: npx tsx scripts/scrape-place-minint.ts
+
+      - name: Summary
+        run: |
+          echo "## PLACE Scraping Complete (10 derniers jours)" >> $GITHUB_STEP_SUMMARY
+          echo "- Date: $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- Période: 10 derniers jours" >> $GITHUB_STEP_SUMMARY
+          echo "- Ministères: MINARM + MININT" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: Success" >> $GITHUB_STEP_SUMMARY

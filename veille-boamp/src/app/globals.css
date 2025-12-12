@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: #0a0a0f;
+  --color-foreground: #ededed;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Premium Dark Palette */
+  --color-navy-900: #0a0a0f;
+  /* Main Background */
+  --color-navy-800: #12121a;
+  /* Card Background */
+  --color-navy-700: #1c1c26;
+  /* Border/Hover */
+  --color-navy-600: #272736;
+
+  /* Accents */
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-red-500: #ef4444;
+  --color-green-500: #22c55e;
+
+  /* Gold (kept for branding) */
+  --color-gold-500: #f1c40f;
+  --color-gold-600: #d4ac0d;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --bg-body: #f8fafc;
+  /* slate-50 */
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  /* slate-200 */
+}
+
+.dark {
+  --background: #0a0a0f;
+  --foreground: #ededed;
+
+  --bg-body: #0B0D11;
+  --bg-card: #14181F;
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dark .glass-panel {
+  background: rgba(11, 13, 17, 0.8);
+}
+
+.grid-pattern {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.card-hover:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Suppress Clerk dev warning as requested */
+.cl-development-badge,
+.cl-available-development-mode-badge {
+  display: none !important;
+}
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: #0a0a0f;
+  --color-foreground: #ededed;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Premium Dark Palette */
+  --color-navy-900: #0a0a0f;
+  /* Main Background */
+  --color-navy-800: #12121a;
+  /* Card Background */
+  --color-navy-700: #1c1c26;
+  /* Border/Hover */
+  --color-navy-600: #272736;
+
+  /* Accents */
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-red-500: #ef4444;
+  --color-green-500: #22c55e;
+
+  /* Gold (kept for branding) */
+  --color-gold-500: #f1c40f;
+  --color-gold-600: #d4ac0d;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --bg-body: #f8fafc;
+  /* slate-50 */
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  /* slate-200 */
+}
+
+.dark {
+  --background: #0a0a0f;
+  --foreground: #ededed;
+
+  --bg-body: #0B0D11;
+  --bg-card: #14181F;
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dark .glass-panel {
+  background: rgba(11, 13, 17, 0.8);
+}
+
+.grid-pattern {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.card-hover:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Suppress Clerk dev warning as requested */
+.cl-development-badge,
+.cl-available-development-mode-badge {
+  display: none !important;
+}
+
+/* Custom Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.btn-shimmer {
+  background-image: linear-gradient(to right, #2563eb, #06b6d4);
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+  transition: all 0.3s ease;
+}
+
+.btn-shimmer:hover {
+  box-shadow: 0 0 25px rgba(37, 99, 235, 0.7);
+  filter: brightness(1.1);
+}
+/* Thin scrollbar for horizontal scroll sections */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
