@@ -96,7 +96,7 @@ export class DocumentAnalysisService {
 
     // Step 5: Save to database (Legacy/History)
     const contentHash = crypto.createHash('sha256').update(buffer).digest('hex');
-    const savedRecord = this.databaseService.findDocumentByHash(contentHash);
+    const savedRecord = await this.databaseService.findDocumentByHash(contentHash);
 
     // If not found in legacy table (maybe cache service saved it in its own table but not legacy one?)
     // Actually, cache service saves to 'document_analyses' which IS the legacy table (or at least same name).
@@ -250,12 +250,12 @@ Utilise l'outil extract_rc_data pour retourner les informations structurées. N'
     return extensions[mimeType] || '.bin';
   }
 
-  getDocumentHistory(limit = 20): Array<{
+  async getDocumentHistory(limit = 20): Promise<Array<{
     id: number;
     filename: string;
     confidence: number | null;
     created_at: string;
-  }> {
-    return this.databaseService.getDocumentAnalyses(limit);
+  }>> {
+    return await this.databaseService.getDocumentAnalyses(limit);
   }
 }

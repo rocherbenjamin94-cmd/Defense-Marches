@@ -65,7 +65,7 @@ export class EntrepriseController {
 
   @Get('stats')
   async getStats() {
-    const stats = this.databaseService.getStats();
+    const stats = await this.databaseService.getStats();
     return { success: true, data: stats };
   }
 
@@ -86,7 +86,7 @@ export class EntrepriseController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const data = this.databaseService.getAllEntreprises(
+    const data = await this.databaseService.getAllEntreprises(
       limit ? parseInt(limit, 10) : 50,
       offset ? parseInt(offset, 10) : 0,
     );
@@ -99,8 +99,8 @@ export class EntrepriseController {
       return { success: true, data: [], source: 'cache' };
     }
 
-    // Recherche dans le cache SQLite uniquement (0 crédit)
-    const results = this.databaseService.searchByName(query);
+    // Recherche dans le cache PostgreSQL uniquement (0 crédit)
+    const results = await this.databaseService.searchByName(query);
 
     // Mapper vers un format simplifié pour l'autocomplete
     const suggestions = results.map((r) => ({

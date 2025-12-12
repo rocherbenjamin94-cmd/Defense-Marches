@@ -6,14 +6,14 @@ export class CacheController {
     constructor(private db: DatabaseService) { }
 
     @Get('stats')
-    getCacheStats() {
-        const claudeCount = this.db.query<{ count: number }>(
+    async getCacheStats() {
+        const claudeCount = await this.db.query<{ count: number }>(
             'SELECT COUNT(*) as count FROM document_analyses',
         );
-        const pappersCount = this.db.query<{ count: number }>(
+        const pappersCount = await this.db.query<{ count: number }>(
             'SELECT COUNT(*) as count FROM entreprises_cache',
         );
-        const searchCount = this.db.query<{ count: number }>(
+        const searchCount = await this.db.query<{ count: number }>(
             'SELECT COUNT(*) as count FROM pappers_searches_cache',
         );
 

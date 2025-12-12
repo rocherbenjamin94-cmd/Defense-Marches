@@ -86,7 +86,7 @@ export class DocumentAnalysisController {
   @Get('history')
   async getHistory(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 20;
-    const history = this.documentAnalysisService.getDocumentHistory(parsedLimit);
+    const history = await this.documentAnalysisService.getDocumentHistory(parsedLimit);
 
     return {
       success: true,
