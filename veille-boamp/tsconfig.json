@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "backend-dc1"
+    "backend-dc1",
+    "scripts"
   ]
 }
