@@ -67,8 +67,9 @@ tmp/
 temp/
 *.tmp
 
-# Generated documents
-generated-documents/
+# Generated documents (output files, not source code)
+/generated-documents/
+**/data/generated-documents/
 
 # Claude plans
 .claude/plans/
