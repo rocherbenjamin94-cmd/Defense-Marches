@@ -4,7 +4,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 import { CacheModule } from './modules/cache/cache.module';
-import { RedisModule } from './modules/cache/redis.module';
 import { PappersModule } from './modules/pappers/pappers.module';
 import { ClaudeModule } from './modules/claude/claude.module';
 import { EntrepriseModule } from './modules/entreprise/entreprise.module';
@@ -28,7 +27,6 @@ import { AppService } from './app.service';
         limit: 10,
       },
     ]),
-    RedisModule,
     CacheModule,
     PappersModule,
     ClaudeModule,

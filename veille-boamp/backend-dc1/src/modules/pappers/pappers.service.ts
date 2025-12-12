@@ -48,11 +48,11 @@ export class PappersService {
   async lookupBySiretWithSource(siret: string): Promise<LookupResult> {
     const cleanedSiret = siret.replace(/\s/g, '');
 
-    // 1. Check SQLite database first
-    const dbRecord = this.databaseService.findBySiret(cleanedSiret);
+    // 1. Check PostgreSQL database first
+    const dbRecord = await this.databaseService.findBySiret(cleanedSiret);
     if (dbRecord) {
-      this.logger.log(`Cache hit (SQLite) for SIRET: ${cleanedSiret}`);
-      this.databaseService.logSearch(cleanedSiret, 'siret', 'cache', 1);
+      this.logger.log(`Cache hit (DB) for SIRET: ${cleanedSiret}`);
+      await this.databaseService.logSearch(cleanedSiret, 'siret', 'cache', 1);
       return {
         data: this.recordToEntrepriseData(dbRecord),
         source: 'cache',
@@ -75,16 +75,16 @@ export class PappersService {
       const data = await this.fetchPappers<PappersResponse>(url);
       const result = this.mapToEntrepriseData(data);
 
-      // 4. Save to SQLite
-      this.saveToDatabase(result, data.siege);
-      this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 1);
+      // 4. Save to database
+      await this.saveToDatabase(result, data.siege);
+      await this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 1);
 
       // Also cache in memory
       await this.cacheService.set(cacheKey, result);
 
       return { data: result, source: 'pappers' };
     } catch (error) {
-      this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 0);
+      await this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 0);
       throw error;
     }
   }
@@ -100,11 +100,11 @@ export class PappersService {
   async lookupBySirenWithSource(siren: string): Promise<LookupResult> {
     const cleanedSiren = siren.replace(/\s/g, '');
 
-    // 1. Check SQLite database first
-    const dbRecord = this.databaseService.findBySiren(cleanedSiren);
+    // 1. Check PostgreSQL database first
+    const dbRecord = await this.databaseService.findBySiren(cleanedSiren);
     if (dbRecord) {
-      this.logger.log(`Cache hit (SQLite) for SIREN: ${cleanedSiren}`);
-      this.databaseService.logSearch(cleanedSiren, 'siren', 'cache', 1);
+      this.logger.log(`Cache hit (DB) for SIREN: ${cleanedSiren}`);
+      await this.databaseService.logSearch(cleanedSiren, 'siren', 'cache', 1);
       return {
         data: this.recordToEntrepriseData(dbRecord),
         source: 'cache',
@@ -127,14 +127,14 @@ export class PappersService {
       const data = await this.fetchPappers<PappersResponse>(url);
       const result = this.mapToEntrepriseData(data);
 
-      // 4. Save to SQLite
-      this.saveToDatabase(result, data.siege);
-      this.databaseService.logSearch(cleanedSiren, 'siren', 'pappers', 1);
+      // 4. Save to database
+      await this.saveToDatabase(result, data.siege);
+      await this.databaseService.logSearch(cleanedSiren, 'siren', 'pappers', 1);
 
       await this.cacheService.set(cacheKey, result);
       return { data: result, source: 'pappers' };
     } catch (error) {
-      this.databaseService.logSearch(cleanedSiren, 'siren', 'pappers', 0);
+      await this.databaseService.logSearch(cleanedSiren, 'siren', 'pappers', 0);
       throw error;
     }
   }
@@ -147,11 +147,11 @@ export class PappersService {
   async searchByNameWithSource(query: string): Promise<LookupResultMultiple> {
     const normalizedQuery = query.toLowerCase().trim();
 
-    // 1. Check SQLite database first
-    const dbRecords = this.databaseService.searchByName(normalizedQuery);
+    // 1. Check PostgreSQL database first
+    const dbRecords = await this.databaseService.searchByName(normalizedQuery);
     if (dbRecords.length > 0) {
-      this.logger.log(`Cache hit (SQLite) for name search: "${query}" - ${dbRecords.length} results`);
-      this.databaseService.logSearch(query, 'nom', 'cache', dbRecords.length);
+      this.logger.log(`Cache hit (DB) for name search: "${query}" - ${dbRecords.length} results`);
+      await this.databaseService.logSearch(query, 'nom', 'cache', dbRecords.length);
       return {
         data: dbRecords.map((r) => this.recordToEntrepriseData(r)),
         source: 'cache',
@@ -181,18 +181,18 @@ export class PappersService {
         forme_juridique: r.forme_juridique,
       })) || [];
 
-      // 4. Save each result to SQLite
-      results.forEach((result) => {
+      // 4. Save each result to database
+      for (const result of results) {
         if (result.siret) {
-          this.saveToDatabase(result);
+          await this.saveToDatabase(result);
         }
-      });
-      this.databaseService.logSearch(query, 'nom', 'pappers', results.length);
+      }
+      await this.databaseService.logSearch(query, 'nom', 'pappers', results.length);
 
       await this.cacheService.set(cacheKey, results);
       return { data: results, source: 'pappers' };
     } catch (error) {
-      this.databaseService.logSearch(query, 'nom', 'pappers', 0);
+      await this.databaseService.logSearch(query, 'nom', 'pappers', 0);
       throw error;
     }
   }
@@ -205,9 +205,9 @@ export class PappersService {
     const data = await this.fetchPappers<PappersResponse>(url);
     const result = this.mapToEntrepriseData(data);
 
-    // Update in SQLite
-    this.saveToDatabase(result, data.siege);
-    this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 1);
+    // Update in database
+    await this.saveToDatabase(result, data.siege);
+    await this.databaseService.logSearch(cleanedSiret, 'siret', 'pappers', 1);
 
     // Update memory cache
     const cacheKey = `pappers:siret:${cleanedSiret}`;
@@ -301,7 +301,7 @@ export class PappersService {
     };
   }
 
-  private saveToDatabase(data: EntrepriseData, siege?: PappersSiege): void {
+  private async saveToDatabase(data: EntrepriseData, siege?: PappersSiege): Promise<void> {
     if (!data.siret) return;
 
     const input: EntrepriseInput = {
@@ -323,7 +323,7 @@ export class PappersService {
       greffe: data.greffe,
     };
 
-    this.databaseService.upsert(input);
+    await this.databaseService.upsert(input);
   }
 
   private formatAdresse(siege: PappersSiege | undefined): string {

@@ -208,7 +208,7 @@ async def create_scheduler(settings: Settings) -> TenderSyncScheduler:
     """
     cache = await get_cache_backend_async(settings.redis_url)
     client = TEDAPIClient(settings, cache)
-    db = TenderDatabase(settings.database_path)
+    db = TenderDatabase(settings.async_database_url)
     await db.init_schema()
 
     return TenderSyncScheduler(settings, client, db)

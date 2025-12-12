@@ -40,17 +40,8 @@ export const MINISTRY_CONFIG: Record<Ministry, { name: string; searchTerm: strin
 const PLACE_URL = 'https://www.marches-publics.gouv.fr';
 const SEARCH_URL = `${PLACE_URL}/?page=Entreprise.EntrepriseAdvancedSearch&searchAnnCons`;
 
-// Configuration Puppeteer pour différents environnements
+// Configuration Puppeteer pour Docker/VPS
 function getPuppeteerConfig() {
-    const isVercel = process.env.VERCEL === '1';
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    if (isVercel) {
-        // Sur Vercel, on ne peut pas utiliser Puppeteer (serverless)
-        // On retournera une erreur ou utilisera une alternative
-        return null;
-    }
-
     return {
         headless: true,
         args: [
@@ -88,11 +79,6 @@ export async function scrapePlaceMinistry(date?: Date, ministry: Ministry = 'MIN
     console.log(`PLACE: Démarrage du scraping - ${ministryConfig.name} - Date: ${dateStr}`);
 
     const puppeteerConfig = getPuppeteerConfig();
-    if (!puppeteerConfig) {
-        console.warn('PLACE: Puppeteer non disponible dans cet environnement (Vercel serverless)');
-        return [];
-    }
-
     let browser: Browser | null = null;
 
     try {
@@ -711,8 +697,6 @@ async function extractMarches(page: Page, ministry: Ministry): Promise<MarchePla
  */
 export async function getPlaceConsultationDetails(consultationId: string): Promise<any> {
     const config = getPuppeteerConfig();
-    if (!config) return null;
-
     let browser: Browser | null = null;
 
     try {

@@ -1,13 +1,12 @@
 """
-Base de données SQLite pour les appels d'offres TED.
+Base de données PostgreSQL pour les appels d'offres TED.
 
-Utilise SQLAlchemy async pour la gestion de la base de données.
-La base est partagée avec le projet veille-boamp existant.
+Utilise SQLAlchemy async avec asyncpg pour PostgreSQL.
+Base de données partagée avec le projet veille-boamp.
 """
 
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 import structlog
@@ -20,83 +19,59 @@ from ted_api.models import PaginatedResponse, Tender, TenderFilter
 logger = structlog.get_logger(__name__)
 
 
-# Schema SQL pour la table ted_tenders
-TED_TENDERS_SCHEMA = """
-CREATE TABLE IF NOT EXISTS ted_tenders (
-    notice_id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT,
-    buyer_name TEXT NOT NULL,
-    buyer_country TEXT NOT NULL,
-    estimated_value REAL,
-    currency TEXT,
-    deadline TEXT,
-    publication_date TEXT NOT NULL,
-    cpv_codes TEXT,
-    procedure_type TEXT,
-    place_of_performance TEXT,
-    url TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-"""
-
-TED_TENDERS_INDEXES = [
-    "CREATE INDEX IF NOT EXISTS idx_ted_country ON ted_tenders(buyer_country);",
-    "CREATE INDEX IF NOT EXISTS idx_ted_deadline ON ted_tenders(deadline);",
-    "CREATE INDEX IF NOT EXISTS idx_ted_publication ON ted_tenders(publication_date);",
-    "CREATE INDEX IF NOT EXISTS idx_ted_cpv ON ted_tenders(cpv_codes);",
-]
-
-
 class TenderDatabase:
     """
     Gestionnaire de base de données pour les appels d'offres TED.
 
-    Utilise SQLite via SQLAlchemy async.
+    Utilise PostgreSQL via SQLAlchemy async.
     Compatible avec la base de données partagée du projet veille-boamp.
     """
 
-    def __init__(self, db_path: str) -> None:
+    def __init__(self, database_url: str) -> None:
         """
         Initialise la connexion à la base de données.
 
         Args:
-            db_path: Chemin vers le fichier SQLite
+            database_url: URL de connexion PostgreSQL (format asyncpg)
         """
-        self.db_path = db_path
+        self.database_url = database_url
         self._engine: AsyncEngine | None = None
-        self._log = logger.bind(component="TenderDatabase", db_path=db_path)
+        self._log = logger.bind(component="TenderDatabase")
 
     @property
     def engine(self) -> AsyncEngine:
         """Retourne le moteur SQLAlchemy (création lazy)."""
         if self._engine is None:
-            # S'assurer que le répertoire existe
-            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-
             self._engine = create_async_engine(
-                f"sqlite+aiosqlite:///{self.db_path}",
+                self.database_url,
                 echo=False,
+                pool_size=5,
+                max_overflow=10,
             )
             self._log.info("Database engine created")
         return self._engine
 
     async def init_schema(self) -> None:
         """
-        Initialise le schéma de la base de données.
-
-        Crée la table ted_tenders et les index si nécessaire.
+        Vérifie que la table ted_tenders existe.
+        Le schéma est créé par init.sql au démarrage de PostgreSQL.
         """
         async with self.engine.begin() as conn:
-            # Créer la table
-            await conn.execute(text(TED_TENDERS_SCHEMA))
+            # Vérifier que la table existe
+            result = await conn.execute(
+                text("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_name = 'ted_tenders'
+                    )
+                """)
+            )
+            exists = result.scalar()
 
-            # Créer les index
-            for index_sql in TED_TENDERS_INDEXES:
-                await conn.execute(text(index_sql))
-
-        self._log.info("Database schema initialized")
+            if not exists:
+                self._log.warning("Table ted_tenders not found - ensure init.sql was executed")
+            else:
+                self._log.info("Database schema verified")
 
     async def close(self) -> None:
         """Ferme la connexion à la base de données."""
@@ -123,57 +98,45 @@ class TenderDatabase:
 
         async with self.engine.begin() as conn:
             for tender in tenders:
-                # Vérifier si existe
-                result = await conn.execute(
-                    text("SELECT notice_id FROM ted_tenders WHERE notice_id = :id"),
-                    {"id": tender.notice_id},
-                )
-                exists = result.fetchone() is not None
-
                 tender_data = self._tender_to_row(tender)
 
-                if exists:
-                    # Update
-                    await conn.execute(
-                        text("""
-                            UPDATE ted_tenders SET
-                                title = :title,
-                                description = :description,
-                                buyer_name = :buyer_name,
-                                buyer_country = :buyer_country,
-                                estimated_value = :estimated_value,
-                                currency = :currency,
-                                deadline = :deadline,
-                                publication_date = :publication_date,
-                                cpv_codes = :cpv_codes,
-                                procedure_type = :procedure_type,
-                                place_of_performance = :place_of_performance,
-                                url = :url,
-                                updated_at = :updated_at
-                            WHERE notice_id = :notice_id
-                        """),
-                        tender_data,
-                    )
-                    updated += 1
-                else:
-                    # Insert
-                    await conn.execute(
-                        text("""
-                            INSERT INTO ted_tenders (
-                                notice_id, title, description, buyer_name,
-                                buyer_country, estimated_value, currency, deadline,
-                                publication_date, cpv_codes, procedure_type,
-                                place_of_performance, url, created_at, updated_at
-                            ) VALUES (
-                                :notice_id, :title, :description, :buyer_name,
-                                :buyer_country, :estimated_value, :currency, :deadline,
-                                :publication_date, :cpv_codes, :procedure_type,
-                                :place_of_performance, :url, :created_at, :updated_at
-                            )
-                        """),
-                        tender_data,
-                    )
+                # Utiliser ON CONFLICT pour upsert
+                result = await conn.execute(
+                    text("""
+                        INSERT INTO ted_tenders (
+                            notice_id, title, description, buyer_name,
+                            buyer_country, estimated_value, currency, deadline,
+                            publication_date, cpv_codes, procedure_type,
+                            place_of_performance, url
+                        ) VALUES (
+                            :notice_id, :title, :description, :buyer_name,
+                            :buyer_country, :estimated_value, :currency, :deadline,
+                            :publication_date, :cpv_codes, :procedure_type,
+                            :place_of_performance, :url
+                        )
+                        ON CONFLICT (notice_id) DO UPDATE SET
+                            title = EXCLUDED.title,
+                            description = EXCLUDED.description,
+                            buyer_name = EXCLUDED.buyer_name,
+                            buyer_country = EXCLUDED.buyer_country,
+                            estimated_value = EXCLUDED.estimated_value,
+                            currency = EXCLUDED.currency,
+                            deadline = EXCLUDED.deadline,
+                            publication_date = EXCLUDED.publication_date,
+                            cpv_codes = EXCLUDED.cpv_codes,
+                            procedure_type = EXCLUDED.procedure_type,
+                            place_of_performance = EXCLUDED.place_of_performance,
+                            url = EXCLUDED.url,
+                            updated_at = NOW()
+                        RETURNING (xmax = 0) AS is_insert
+                    """),
+                    tender_data,
+                )
+                row = result.fetchone()
+                if row and row[0]:
                     inserted += 1
+                else:
+                    updated += 1
 
         self._log.info(
             "Tenders upserted",
@@ -213,9 +176,9 @@ class TenderDatabase:
             params["country"] = filters.country
 
         if filters.cpv:
-            # Recherche par préfixe CPV
-            where_clauses.append("cpv_codes LIKE :cpv")
-            params["cpv"] = f"%{filters.cpv}%"
+            # Recherche dans le tableau JSONB de CPV codes
+            where_clauses.append("cpv_codes @> :cpv::jsonb")
+            params["cpv"] = json.dumps([filters.cpv])
 
         if filters.min_value is not None:
             where_clauses.append("estimated_value >= :min_value")
@@ -226,14 +189,11 @@ class TenderDatabase:
             params["max_value"] = filters.max_value
 
         if filters.days_remaining is not None:
-            # Filtrer par deadline minimum
-            min_deadline = datetime.now().strftime("%Y-%m-%d")
-            where_clauses.append("deadline >= :min_deadline")
-            params["min_deadline"] = min_deadline
+            where_clauses.append("deadline >= CURRENT_DATE")
 
         if filters.search_text:
             where_clauses.append(
-                "(title LIKE :search OR description LIKE :search)"
+                "(title ILIKE :search OR description ILIKE :search)"
             )
             params["search"] = f"%{filters.search_text}%"
 
@@ -311,7 +271,7 @@ class TenderDatabase:
                     WHERE created_at > :since
                     ORDER BY created_at DESC
                 """),
-                {"since": since.isoformat()},
+                {"since": since},
             )
             rows = result.fetchall()
 
@@ -332,8 +292,8 @@ class TenderDatabase:
                 text("""
                     SELECT * FROM ted_tenders
                     WHERE deadline IS NOT NULL
-                    AND deadline >= date('now')
-                    AND deadline <= date('now', '+' || :days || ' days')
+                    AND deadline >= CURRENT_DATE
+                    AND deadline <= CURRENT_DATE + :days * INTERVAL '1 day'
                     ORDER BY deadline ASC
                 """),
                 {"days": days},
@@ -354,7 +314,7 @@ class TenderDatabase:
                 text("""
                     DELETE FROM ted_tenders
                     WHERE deadline IS NOT NULL
-                    AND deadline < date('now')
+                    AND deadline < CURRENT_DATE
                 """)
             )
             deleted = result.rowcount
@@ -394,7 +354,7 @@ class TenderDatabase:
             result = await conn.execute(
                 text("""
                     SELECT COUNT(*) FROM ted_tenders
-                    WHERE deadline IS NULL OR deadline >= date('now')
+                    WHERE deadline IS NULL OR deadline >= CURRENT_DATE
                 """)
             )
             active = result.scalar() or 0
@@ -419,9 +379,17 @@ class TenderDatabase:
             "average_value": avg_value,
         }
 
+    async def health_check(self) -> bool:
+        """Vérifie la connexion à la base de données."""
+        try:
+            async with self.engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            return False
+
     def _tender_to_row(self, tender: Tender) -> dict[str, Any]:
         """Convertit un Tender en dict pour insertion SQL."""
-        now = datetime.now().isoformat()
         return {
             "notice_id": tender.notice_id,
             "title": tender.title,
@@ -430,14 +398,12 @@ class TenderDatabase:
             "buyer_country": tender.buyer_country,
             "estimated_value": tender.estimated_value,
             "currency": tender.currency,
-            "deadline": tender.deadline.isoformat() if tender.deadline else None,
-            "publication_date": tender.publication_date.isoformat(),
+            "deadline": tender.deadline if tender.deadline else None,
+            "publication_date": tender.publication_date,
             "cpv_codes": json.dumps(tender.cpv_codes),
             "procedure_type": tender.procedure_type,
             "place_of_performance": tender.place_of_performance,
             "url": tender.url,
-            "created_at": now,
-            "updated_at": now,
         }
 
     def _row_to_tender(self, row: Any) -> Tender:
@@ -455,8 +421,8 @@ class TenderDatabase:
             ]
             data = dict(zip(columns, row))
 
-        # Parser les CPV codes (JSON)
-        cpv_codes = data.get("cpv_codes", "[]")
+        # Parser les CPV codes (JSON ou liste)
+        cpv_codes = data.get("cpv_codes", [])
         if isinstance(cpv_codes, str):
             try:
                 cpv_codes = json.loads(cpv_codes)
@@ -490,6 +456,6 @@ async def get_database(settings: Settings) -> TenderDatabase:
     Returns:
         TenderDatabase initialisée
     """
-    db = TenderDatabase(settings.database_path)
+    db = TenderDatabase(settings.async_database_url)
     await db.init_schema()
     return db

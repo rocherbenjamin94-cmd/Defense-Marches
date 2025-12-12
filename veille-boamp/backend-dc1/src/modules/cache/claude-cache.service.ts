@@ -27,11 +27,11 @@ export class ClaudeCacheService {
 
         if (!forceRefresh) {
             // 2. Vérifier le cache
-            const cached = this.db.query<{
+            const cached = await this.db.query<{
                 analysis_result: string;
                 created_at: string;
             }>(
-                'SELECT analysis_result, created_at FROM document_analyses WHERE document_hash = ?',
+                'SELECT analysis_result, created_at FROM document_analyses WHERE document_hash = $1',
                 [hash],
             );
 
@@ -55,11 +55,11 @@ export class ClaudeCacheService {
 
         // 4. Sauvegarder en cache
         const id = uuidv4();
-        this.db.run(
+        await this.db.run(
             `INSERT INTO document_analyses (id, document_hash, analysis_result, created_at)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT (document_hash) DO UPDATE SET analysis_result = ?, created_at = CURRENT_TIMESTAMP`,
-            [id, hash, JSON.stringify(result), JSON.stringify(result)],
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (document_hash) DO UPDATE SET analysis_result = $3, created_at = CURRENT_TIMESTAMP`,
+            [id, hash, JSON.stringify(result)],
         );
 
         return result;

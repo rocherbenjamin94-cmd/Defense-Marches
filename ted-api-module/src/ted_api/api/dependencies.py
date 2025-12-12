@@ -45,9 +45,9 @@ async def init_dependencies(settings: Settings | None = None) -> None:
     logger.info("Cache initialized", type=type(_cache).__name__)
 
     # Database
-    _database = TenderDatabase(settings.database_path)
+    _database = TenderDatabase(settings.async_database_url)
     await _database.init_schema()
-    logger.info("Database initialized", path=settings.database_path)
+    logger.info("Database initialized", url=settings.database_url)
 
     # TED API Client
     _client = TEDAPIClient(settings, _cache)

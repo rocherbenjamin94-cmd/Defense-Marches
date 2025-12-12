@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
-import { RedisService } from '../cache/redis.service';
+import { DatabaseService } from '../cache/database.service';
 
 export interface ScoreCompatibilite {
     scoreGenerique: number;
@@ -90,16 +90,25 @@ export interface AnalyseSummary {
     nombreLots: number;
 }
 
+// Helper pour nettoyer les réponses JSON de Claude
+function cleanJsonResponse(text: string): string {
+    let jsonText = text.trim();
+    if (jsonText.startsWith('```json')) jsonText = jsonText.slice(7);
+    if (jsonText.startsWith('```')) jsonText = jsonText.slice(3);
+    if (jsonText.endsWith('```')) jsonText = jsonText.slice(0, -3);
+    return jsonText.trim();
+}
+
 @Injectable()
 export class AnalyseService {
     private readonly logger = new Logger(AnalyseService.name);
-    private localCache: Map<string, AnalyseMarche> = new Map(); // Fallback si Redis non dispo
+    private localCache: Map<string, AnalyseMarche> = new Map(); // Fallback si PostgreSQL non dispo
     private anthropic: Anthropic;
 
     constructor(
         private httpService: HttpService,
         private configService: ConfigService,
-        private redisService: RedisService,
+        private databaseService: DatabaseService,
     ) {
         this.anthropic = new Anthropic({
             apiKey: this.configService.get<string>('anthropic.apiKey'),
@@ -107,16 +116,14 @@ export class AnalyseService {
     }
 
     async analyserMarche(marcheId: string, boampUrl: string): Promise<AnalyseMarche> {
-        const cacheKey = `analyse:${marcheId}`;
-
-        // 1. Vérifier le cache Redis d'abord
-        const cached = await this.redisService.get<AnalyseMarche>(cacheKey);
+        // 1. Vérifier le cache PostgreSQL d'abord
+        const cached = await this.getAnalyseFromDb(marcheId);
         if (cached) {
-            this.logger.log(`✓ Redis cache hit pour marché ${marcheId}`);
+            this.logger.log(`✓ PostgreSQL cache hit pour marché ${marcheId}`);
             return cached;
         }
 
-        // 2. Fallback sur cache local (si Redis non dispo)
+        // 2. Fallback sur cache local (si PostgreSQL non dispo)
         if (this.localCache.has(marcheId)) {
             this.logger.log(`✓ Local cache hit pour marché ${marcheId}`);
             return this.localCache.get(marcheId)!;
@@ -131,12 +138,44 @@ export class AnalyseService {
         // 4. Analyser avec Claude
         const analyse = await this.analyserAvecClaude(marcheId, pdfBuffer);
 
-        // 5. Stocker en cache Redis (TTL 30 jours) et local
-        await this.redisService.set(cacheKey, analyse, 30 * 24 * 60 * 60);
+        // 5. Stocker en cache PostgreSQL et local
+        await this.saveAnalyseToDb(marcheId, analyse);
         this.localCache.set(marcheId, analyse);
-        this.logger.log(`✓ Analyse terminée et mise en cache Redis pour ${marcheId}`);
+        this.logger.log(`✓ Analyse terminée et mise en cache PostgreSQL pour ${marcheId}`);
 
         return analyse;
+    }
+
+    private async getAnalyseFromDb(marcheId: string): Promise<AnalyseMarche | null> {
+        try {
+            const row = await this.databaseService.query<{ analysis_result: any }>(
+                'SELECT analysis_result FROM document_analyses WHERE document_hash = $1',
+                [`analyse:${marcheId}`]
+            );
+            if (row?.analysis_result) {
+                return typeof row.analysis_result === 'string'
+                    ? JSON.parse(row.analysis_result)
+                    : row.analysis_result;
+            }
+            return null;
+        } catch (error) {
+            this.logger.warn(`Erreur lecture analyse depuis DB: ${error.message}`);
+            return null;
+        }
+    }
+
+    private async saveAnalyseToDb(marcheId: string, analyse: AnalyseMarche): Promise<void> {
+        try {
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 jours
+            await this.databaseService.saveDocumentAnalysis(
+                `analyse-${marcheId}-${Date.now()}`,
+                `analyse:${marcheId}`,
+                analyse,
+                expiresAt
+            );
+        } catch (error) {
+            this.logger.warn(`Erreur sauvegarde analyse vers DB: ${error.message}`);
+        }
     }
 
     private async recupererContenuMarche(boampUrl: string): Promise<Buffer> {
@@ -290,12 +329,7 @@ Réponds UNIQUEMENT avec ce JSON valide :
             }
 
             // Nettoyer la réponse
-            let jsonText = textBlock.text.trim();
-            if (jsonText.startsWith('```json')) jsonText = jsonText.slice(7);
-            if (jsonText.startsWith('```')) jsonText = jsonText.slice(3);
-            if (jsonText.endsWith('```')) jsonText = jsonText.slice(0, -3);
-            jsonText = jsonText.trim();
-
+            const jsonText = cleanJsonResponse(textBlock.text);
             const parsed = JSON.parse(jsonText);
 
             return {
@@ -314,10 +348,8 @@ Réponds UNIQUEMENT avec ce JSON valide :
     }
 
     async calculerScorePersonnalise(marcheId: string, profilEntreprise: ProfilEntreprise): Promise<ScoreCompatibilite> {
-        const cacheKey = `analyse:${marcheId}`;
-
-        // Chercher dans Redis d'abord, puis local
-        let analyse = await this.redisService.get<AnalyseMarche>(cacheKey);
+        // Chercher dans PostgreSQL d'abord, puis local
+        let analyse = await this.getAnalyseFromDb(marcheId);
         if (!analyse) {
             analyse = this.localCache.get(marcheId) || null;
         }
@@ -374,12 +406,7 @@ Réponds UNIQUEMENT en JSON valide :
                 throw new Error('Aucune réponse textuelle de Claude');
             }
 
-            let jsonText = textBlock.text.trim();
-            if (jsonText.startsWith('```json')) jsonText = jsonText.slice(7);
-            if (jsonText.startsWith('```')) jsonText = jsonText.slice(3);
-            if (jsonText.endsWith('```')) jsonText = jsonText.slice(0, -3);
-            jsonText = jsonText.trim();
-
+            const jsonText = cleanJsonResponse(textBlock.text);
             const parsed = JSON.parse(jsonText);
 
             return {
@@ -395,65 +422,112 @@ Réponds UNIQUEMENT en JSON valide :
 
     async clearCache(): Promise<void> {
         this.localCache.clear();
-        // Supprimer les clés Redis avec pattern analyse:*
-        const keys = await this.redisService.keys('analyse:*');
-        for (const key of keys) {
-            await this.redisService.delete(key);
+        // Supprimer les analyses de la base PostgreSQL
+        try {
+            await this.databaseService.run(
+                "DELETE FROM document_analyses WHERE document_hash LIKE 'analyse:%'"
+            );
+        } catch (error) {
+            this.logger.warn(`Erreur suppression cache analyse: ${error.message}`);
         }
-        this.logger.log('Cache local et Redis vidés');
+        this.logger.log('Cache local et PostgreSQL vidés');
     }
 
-    async getCacheStats(): Promise<{ localSize: number; redisKeys: number; connected: boolean }> {
-        const redisStats = await this.redisService.getStats();
+    async getCacheStats(): Promise<{ localSize: number; dbEntries: number; connected: boolean }> {
+        const connected = await this.databaseService.healthCheck();
+        let dbEntries = 0;
+        try {
+            const result = await this.databaseService.query<{ count: string }>(
+                "SELECT COUNT(*) as count FROM document_analyses WHERE document_hash LIKE 'analyse:%'"
+            );
+            dbEntries = parseInt(result?.count || '0');
+        } catch {
+            // Ignore
+        }
         return {
             localSize: this.localCache.size,
-            redisKeys: redisStats.keys,
-            connected: redisStats.connected,
+            dbEntries,
+            connected,
         };
     }
 
     // Récupérer tous les marchés analysés en cache
     async getAnalysedMarches(): Promise<AnalysedMarcheSummary[]> {
-        const keys = await this.redisService.keys('analyse:*');
         const result: AnalysedMarcheSummary[] = [];
 
-        for (const key of keys) {
-            const cached = await this.redisService.get<AnalyseMarche>(key);
-            if (cached) {
-                result.push({
-                    marcheId: key.replace('analyse:', ''),
-                    titre: cached.marche?.titre || cached.prefillDC1?.objetMarche || 'Marché sans titre',
-                    acheteur: cached.acheteur?.nom || cached.prefillDC1?.nomAcheteur || 'Acheteur inconnu',
-                    scoreCompatibilite: cached.scoreCompatibilite?.scoreGenerique || 50,
-                    difficulte: (cached.scoreCompatibilite?.niveau?.toLowerCase() as 'facile' | 'moyen' | 'difficile') || 'moyen',
-                    dateLimite: cached.marche?.dateLimite || '',
-                    analysedAt: cached.analyzedAt?.toString() || new Date().toISOString(),
-                });
+        try {
+            const rows = await this.databaseService.queryAll<{ document_hash: string; analysis_result: any; created_at: Date }>(
+                "SELECT document_hash, analysis_result, created_at FROM document_analyses WHERE document_hash LIKE 'analyse:%' ORDER BY created_at DESC LIMIT 10"
+            );
+
+            for (const row of rows) {
+                const cached = typeof row.analysis_result === 'string'
+                    ? JSON.parse(row.analysis_result)
+                    : row.analysis_result;
+
+                if (cached) {
+                    result.push({
+                        marcheId: row.document_hash.replace('analyse:', ''),
+                        titre: cached.marche?.titre || cached.prefillDC1?.objetMarche || 'Marché sans titre',
+                        acheteur: cached.acheteur?.nom || cached.prefillDC1?.nomAcheteur || 'Acheteur inconnu',
+                        scoreCompatibilite: cached.scoreCompatibilite?.scoreGenerique || 50,
+                        difficulte: (cached.scoreCompatibilite?.niveau?.toLowerCase() as 'facile' | 'moyen' | 'difficile') || 'moyen',
+                        dateLimite: cached.marche?.dateLimite || '',
+                        analysedAt: row.created_at?.toISOString() || new Date().toISOString(),
+                    });
+                }
             }
+        } catch (error) {
+            this.logger.warn(`Erreur récupération marchés analysés: ${error.message}`);
         }
 
-        // Trier par date d'analyse (plus récent d'abord), max 10
-        return result
-            .sort((a, b) => new Date(b.analysedAt).getTime() - new Date(a.analysedAt).getTime())
-            .slice(0, 10);
+        return result;
     }
 
-    // Vérifier quels marchés ont une analyse en cache (batch)
+    // Vérifier quels marchés ont une analyse en cache (batch - requête unique)
     async checkCacheBatch(ids: string[]): Promise<Record<string, AnalyseSummary | null>> {
         const result: Record<string, AnalyseSummary | null> = {};
 
+        // Initialiser tous les IDs à null
         for (const id of ids) {
-            const cached = await this.redisService.get<AnalyseMarche>(`analyse:${id}`);
-            if (cached) {
-                result[id] = {
-                    hasAnalyse: true,
-                    scoreCompatibilite: cached.scoreCompatibilite?.scoreGenerique || 50,
-                    difficulte: cached.scoreCompatibilite?.niveau?.toLowerCase() as 'facile' | 'moyen' | 'difficile' || 'moyen',
-                    nombreLots: cached.lots?.length || 0,
-                };
-            } else {
-                result[id] = null;
+            result[id] = null;
+        }
+
+        if (ids.length === 0) {
+            return result;
+        }
+
+        try {
+            // Construire les hashes à rechercher
+            const hashes = ids.map(id => `analyse:${id}`);
+
+            // Requête batch avec ANY au lieu de N requêtes individuelles
+            const rows = await this.databaseService.queryAll<{
+                document_hash: string;
+                analysis_result: any;
+            }>(
+                'SELECT document_hash, analysis_result FROM document_analyses WHERE document_hash = ANY($1)',
+                [hashes]
+            );
+
+            // Mapper les résultats
+            for (const row of rows) {
+                const marcheId = row.document_hash.replace('analyse:', '');
+                const cached = typeof row.analysis_result === 'string'
+                    ? JSON.parse(row.analysis_result)
+                    : row.analysis_result;
+
+                if (cached) {
+                    result[marcheId] = {
+                        hasAnalyse: true,
+                        scoreCompatibilite: cached.scoreCompatibilite?.scoreGenerique || 50,
+                        difficulte: cached.scoreCompatibilite?.niveau?.toLowerCase() as 'facile' | 'moyen' | 'difficile' || 'moyen',
+                        nombreLots: cached.lots?.length || 0,
+                    };
+                }
             }
+        } catch (error) {
+            this.logger.warn(`Erreur checkCacheBatch: ${error.message}`);
         }
 
         return result;

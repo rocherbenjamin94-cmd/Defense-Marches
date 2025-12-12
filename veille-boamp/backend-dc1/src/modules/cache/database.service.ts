@@ -1,265 +1,294 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import initSqlJs, { Database } from 'sql.js';
-import * as path from 'path';
-import * as fs from 'fs';
+import { ConfigService } from '@nestjs/config';
+import { Pool, PoolClient } from 'pg';
 import { EntrepriseRecord, EntrepriseInput, CacheStats } from './database.types';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private db: Database;
-  private dbPath: string;
+  private pool: Pool;
+
+  constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL environment variable is required');
     }
 
-    this.dbPath = path.join(dataDir, 'cache.db');
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
 
-    const SQL = await initSqlJs();
-
-    if (fs.existsSync(this.dbPath)) {
-      const filebuffer = fs.readFileSync(this.dbPath);
-      this.db = new SQL.Database(filebuffer);
-    } else {
-      this.db = new SQL.Database();
-      this.save();
-    }
-
-    this.initSchema();
-  }
-
-  onModuleDestroy() {
-    if (this.db) {
-      this.save();
-      this.db.close();
+    // Test connection
+    const client = await this.pool.connect();
+    try {
+      await client.query('SELECT 1');
+      console.log('[Database] PostgreSQL connected successfully');
+    } finally {
+      client.release();
     }
   }
 
-  private save() {
-    const data = this.db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(this.dbPath, buffer);
-  }
-
-  private initSchema() {
-    // Cache des analyses de documents RC par Claude
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS document_analyses (
-        id TEXT PRIMARY KEY,
-        document_hash TEXT UNIQUE NOT NULL,
-        analysis_result TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        expires_at DATETIME
-      )
-    `);
-
-    // Cache des marchés BOAMP enrichis
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS marches_cache (
-        id TEXT PRIMARY KEY,
-        raw_data TEXT NOT NULL,
-        enriched_data TEXT,
-        last_fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Cache des entreprises Pappers
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS entreprises_cache (
-        siret TEXT PRIMARY KEY,
-        siren TEXT NOT NULL,
-        data TEXT NOT NULL,
-        fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Cache des recherches Pappers
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS pappers_searches_cache (
-        search_query TEXT PRIMARY KEY,
-        results TEXT NOT NULL,
-        fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Logs des recherches
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS search_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        query TEXT NOT NULL,
-        query_type TEXT NOT NULL,
-        source TEXT NOT NULL,
-        resultat_count INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Historique des documents générés
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS generated_documents (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        marche_id TEXT NOT NULL,
-        marche_titre TEXT,
-        marche_acheteur TEXT,
-        document_type TEXT NOT NULL,
-        file_name TEXT,
-        file_format TEXT,
-        generated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Index pour les documents par utilisateur
-    this.db.run(`
-      CREATE INDEX IF NOT EXISTS idx_generated_docs_user ON generated_documents(user_id)
-    `);
-
-    // Quotas utilisateurs
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS user_quotas (
-        user_id TEXT PRIMARY KEY,
-        generations_used INTEGER DEFAULT 0,
-        quota_reset_date DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    console.log('[Database] Cache schema initialized');
-    this.save();
-  }
-
-  query<T = any>(sql: string, params: any[] = []): T | undefined {
-    const stmt = this.db.prepare(sql);
-    stmt.bind(params);
-    let result: T | undefined;
-    if (stmt.step()) {
-      result = stmt.getAsObject() as T;
+  async onModuleDestroy() {
+    if (this.pool) {
+      await this.pool.end();
+      console.log('[Database] PostgreSQL pool closed');
     }
-    stmt.free();
-    return result;
   }
 
-  queryAll<T = any>(sql: string, params: any[] = []): T[] {
-    const stmt = this.db.prepare(sql);
-    stmt.bind(params);
-    const results: T[] = [];
-    while (stmt.step()) {
-      results.push(stmt.getAsObject() as T);
-    }
-    stmt.free();
-    return results;
+  // --- Low-level query methods ---
+
+  async query<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+    const result = await this.pool.query(sql, params);
+    return result.rows[0] as T | undefined;
   }
 
-  run(sql: string, params: any[] = []): void {
-    this.db.run(sql, params);
-    this.save();
+  async queryAll<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    const result = await this.pool.query(sql, params);
+    return result.rows as T[];
+  }
+
+  async run(sql: string, params: any[] = []): Promise<void> {
+    await this.pool.query(sql, params);
   }
 
   // --- Document Analysis Methods ---
 
-  findDocumentByHash(hash: string): any {
-    return this.query('SELECT * FROM document_analyses WHERE document_hash = ?', [hash]);
+  async findDocumentByHash(hash: string): Promise<any> {
+    return this.query(
+      'SELECT * FROM document_analyses WHERE document_hash = $1',
+      [hash]
+    );
   }
 
-  getDocumentAnalyses(limit: number): any[] {
-    return this.queryAll('SELECT * FROM document_analyses ORDER BY created_at DESC LIMIT ?', [limit]);
+  async saveDocumentAnalysis(id: string, hash: string, result: any, expiresAt?: Date): Promise<void> {
+    await this.run(
+      `INSERT INTO document_analyses (id, document_hash, analysis_result, expires_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (document_hash) DO UPDATE SET
+         analysis_result = EXCLUDED.analysis_result,
+         expires_at = EXCLUDED.expires_at`,
+      [id, hash, JSON.stringify(result), expiresAt]
+    );
+  }
+
+  async getDocumentAnalyses(limit: number): Promise<any[]> {
+    return this.queryAll(
+      'SELECT * FROM document_analyses ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
   }
 
   // --- Entreprise Methods ---
 
-  findBySiret(siret: string): EntrepriseRecord | undefined {
-    const row = this.query<{ siret: string; siren: string; data: string; fetched_at: string }>(
-      'SELECT * FROM entreprises_cache WHERE siret = ?',
-      [siret],
+  async findBySiret(siret: string): Promise<EntrepriseRecord | undefined> {
+    const row = await this.query<EntrepriseRecord>(
+      'SELECT * FROM entreprises WHERE siret = $1',
+      [siret]
     );
-    return row ? this.mapRowToEntrepriseRecord(row) : undefined;
+    return row;
   }
 
-  findBySiren(siren: string): EntrepriseRecord | undefined {
-    const row = this.query<{ siret: string; siren: string; data: string; fetched_at: string }>(
-      'SELECT * FROM entreprises_cache WHERE siren = ? LIMIT 1',
-      [siren],
+  async findBySiren(siren: string): Promise<EntrepriseRecord | undefined> {
+    const row = await this.query<EntrepriseRecord>(
+      'SELECT * FROM entreprises WHERE siren = $1 LIMIT 1',
+      [siren]
     );
-    return row ? this.mapRowToEntrepriseRecord(row) : undefined;
+    return row;
   }
 
-  searchByName(query: string): EntrepriseRecord[] {
-    // Simple LIKE search on the JSON data string
-    const rows = this.queryAll<{ siret: string; siren: string; data: string; fetched_at: string }>(
-      'SELECT * FROM entreprises_cache WHERE data LIKE ? LIMIT 20',
-      [`%${query}%`],
+  async searchByName(query: string): Promise<EntrepriseRecord[]> {
+    // Use pg_trgm for fuzzy search
+    return this.queryAll<EntrepriseRecord>(
+      `SELECT * FROM entreprises
+       WHERE nom_entreprise ILIKE $1
+       ORDER BY similarity(nom_entreprise, $2) DESC
+       LIMIT 20`,
+      [`%${query}%`, query]
     );
-    return rows.map((row) => this.mapRowToEntrepriseRecord(row));
   }
 
-  getAllEntreprises(limit: number, offset: number): EntrepriseRecord[] {
-    const rows = this.queryAll<{ siret: string; siren: string; data: string; fetched_at: string }>(
-      'SELECT * FROM entreprises_cache ORDER BY fetched_at DESC LIMIT ? OFFSET ?',
-      [limit, offset],
+  async getAllEntreprises(limit: number, offset: number): Promise<EntrepriseRecord[]> {
+    return this.queryAll<EntrepriseRecord>(
+      'SELECT * FROM entreprises ORDER BY updated_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    return rows.map((row) => this.mapRowToEntrepriseRecord(row));
   }
 
-  upsert(data: EntrepriseInput): void {
-    const json = JSON.stringify(data);
-    this.run(
-      `INSERT INTO entreprises_cache (siret, siren, data, fetched_at)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(siret) DO UPDATE SET
-         siren = excluded.siren,
-         data = excluded.data,
-         fetched_at = CURRENT_TIMESTAMP`,
-      [data.siret, data.siren, json],
+  async upsert(data: EntrepriseInput): Promise<void> {
+    await this.run(
+      `INSERT INTO entreprises (
+        siret, siren, nom_entreprise, denomination_sociale, forme_juridique,
+        adresse_ligne_1, code_postal, ville, code_naf, libelle_naf,
+        effectif, date_creation, capital, numero_rcs, greffe, raw_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      ON CONFLICT (siret) DO UPDATE SET
+        siren = EXCLUDED.siren,
+        nom_entreprise = EXCLUDED.nom_entreprise,
+        denomination_sociale = EXCLUDED.denomination_sociale,
+        forme_juridique = EXCLUDED.forme_juridique,
+        adresse_ligne_1 = EXCLUDED.adresse_ligne_1,
+        code_postal = EXCLUDED.code_postal,
+        ville = EXCLUDED.ville,
+        code_naf = EXCLUDED.code_naf,
+        libelle_naf = EXCLUDED.libelle_naf,
+        effectif = EXCLUDED.effectif,
+        date_creation = EXCLUDED.date_creation,
+        capital = EXCLUDED.capital,
+        numero_rcs = EXCLUDED.numero_rcs,
+        greffe = EXCLUDED.greffe,
+        raw_data = EXCLUDED.raw_data,
+        updated_at = NOW()`,
+      [
+        data.siret,
+        data.siren,
+        data.nom_entreprise,
+        data.denomination_sociale || null,
+        data.forme_juridique || null,
+        data.adresse_ligne_1 || null,
+        data.code_postal || null,
+        data.ville || null,
+        data.code_naf || null,
+        data.libelle_naf || null,
+        data.effectif || null,
+        data.date_creation || null,
+        data.capital || null,
+        data.numero_rcs || null,
+        data.greffe || null,
+        JSON.stringify(data),
+      ]
+    );
+  }
+
+  // --- Pappers Search Cache ---
+
+  async findPappersSearch(query: string): Promise<any | undefined> {
+    const row = await this.query<{ results: any }>(
+      'SELECT results FROM pappers_searches_cache WHERE search_query = $1',
+      [query]
+    );
+    return row?.results;
+  }
+
+  async savePappersSearch(query: string, results: any): Promise<void> {
+    await this.run(
+      `INSERT INTO pappers_searches_cache (search_query, results)
+       VALUES ($1, $2)
+       ON CONFLICT (search_query) DO UPDATE SET
+         results = EXCLUDED.results,
+         fetched_at = NOW()`,
+      [query, JSON.stringify(results)]
+    );
+  }
+
+  // --- Generated Documents ---
+
+  async saveGeneratedDocument(
+    id: string,
+    userId: string,
+    marcheId: string,
+    marcheTitre: string | null,
+    marcheAcheteur: string | null,
+    documentType: string,
+    fileName: string | null,
+    fileFormat: string | null
+  ): Promise<void> {
+    await this.run(
+      `INSERT INTO generated_documents (
+        id, user_id, marche_id, marche_titre, marche_acheteur,
+        document_type, file_name, file_format
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, userId, marcheId, marcheTitre, marcheAcheteur, documentType, fileName, fileFormat]
+    );
+  }
+
+  async getGeneratedDocuments(userId: string, limit: number = 50): Promise<any[]> {
+    return this.queryAll(
+      `SELECT * FROM generated_documents
+       WHERE user_id = $1
+       ORDER BY generated_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+  }
+
+  // --- User Quotas ---
+
+  async getUserQuota(userId: string): Promise<{ generations_used: number; quota_reset_date: Date | null } | undefined> {
+    return this.query(
+      'SELECT generations_used, quota_reset_date FROM user_quotas WHERE user_id = $1',
+      [userId]
+    );
+  }
+
+  async incrementUserQuota(userId: string): Promise<void> {
+    await this.run(
+      `INSERT INTO user_quotas (user_id, generations_used, quota_reset_date)
+       VALUES ($1, 1, NOW() + INTERVAL '1 month')
+       ON CONFLICT (user_id) DO UPDATE SET
+         generations_used = user_quotas.generations_used + 1,
+         updated_at = NOW()`,
+      [userId]
+    );
+  }
+
+  async resetUserQuota(userId: string): Promise<void> {
+    await this.run(
+      `UPDATE user_quotas SET
+        generations_used = 0,
+        quota_reset_date = NOW() + INTERVAL '1 month',
+        updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId]
     );
   }
 
   // --- Stats & Logs ---
 
-  logSearch(query: string, type: string, source: string, count: number): void {
-    this.run(
-      'INSERT INTO search_logs (query, query_type, source, resultat_count) VALUES (?, ?, ?, ?)',
-      [query, type, source, count],
+  async logSearch(query: string, type: string, source: string, count: number): Promise<void> {
+    await this.run(
+      'INSERT INTO search_logs (query, query_type, source, resultat_count) VALUES ($1, $2, $3, $4)',
+      [query, type, source, count]
     );
   }
 
-  getStats(): CacheStats {
-    const totalEntreprises = this.query<{ count: number }>('SELECT COUNT(*) as count FROM entreprises_cache')?.count || 0;
-    const totalSearches = this.query<{ count: number }>('SELECT COUNT(*) as count FROM search_logs')?.count || 0;
-    const cacheHits = this.query<{ count: number }>('SELECT COUNT(*) as count FROM search_logs WHERE source = ?', ['cache'])?.count || 0;
+  async getStats(): Promise<CacheStats> {
+    const totalEntreprises = (await this.query<{ count: string }>(
+      'SELECT COUNT(*) as count FROM entreprises'
+    ))?.count || '0';
+
+    const totalSearches = (await this.query<{ count: string }>(
+      'SELECT COUNT(*) as count FROM search_logs'
+    ))?.count || '0';
+
+    const cacheHits = (await this.query<{ count: string }>(
+      "SELECT COUNT(*) as count FROM search_logs WHERE source = 'cache'"
+    ))?.count || '0';
+
+    const total = parseInt(totalSearches);
+    const hits = parseInt(cacheHits);
 
     return {
-      total_entreprises: totalEntreprises,
-      from_pappers: totalEntreprises, // Assuming all come from Pappers eventually
-      total_searches: totalSearches,
-      cache_hits: cacheHits,
-      cache_hit_rate: totalSearches > 0 ? ((cacheHits / totalSearches) * 100).toFixed(1) + '%' : '0%',
+      total_entreprises: parseInt(totalEntreprises),
+      from_pappers: parseInt(totalEntreprises),
+      total_searches: total,
+      cache_hits: hits,
+      cache_hit_rate: total > 0 ? ((hits / total) * 100).toFixed(1) + '%' : '0%',
     };
   }
 
-  private mapRowToEntrepriseRecord(row: { siret: string; siren: string; data: string; fetched_at: string }): EntrepriseRecord {
-    const data = JSON.parse(row.data) as EntrepriseInput;
-    return {
-      id: 0, // Not used in this schema
-      siren: row.siren,
-      siret: row.siret,
-      nom_entreprise: data.nom_entreprise,
-      denomination_sociale: data.denomination_sociale || null,
-      forme_juridique: data.forme_juridique || null,
-      adresse_ligne_1: data.adresse_ligne_1 || null,
-      code_postal: data.code_postal || null,
-      ville: data.ville || null,
-      code_naf: data.code_naf || null,
-      libelle_naf: data.libelle_naf || null,
-      effectif: data.effectif || null,
-      source: 'cache',
-      created_at: row.fetched_at,
-      updated_at: row.fetched_at,
-      date_creation: data.date_creation || null,
-      capital: data.capital || null,
-      numero_rcs: data.numero_rcs || null,
-      greffe: data.greffe || null,
-    };
+  // --- Health Check ---
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.query('SELECT 1');
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

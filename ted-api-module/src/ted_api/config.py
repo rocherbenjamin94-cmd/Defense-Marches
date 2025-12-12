@@ -5,10 +5,9 @@ Utilise pydantic-settings pour la gestion des variables d'environnement.
 """
 
 from functools import lru_cache
-from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -47,10 +46,10 @@ class Settings(BaseSettings):
         description="Timeout pour les requêtes API TED (secondes)",
     )
 
-    # Database Configuration
-    database_path: str = Field(
-        default="../veille-boamp/backend-dc1/data/cache.db",
-        description="Chemin vers la base de données SQLite partagée",
+    # Database Configuration - PostgreSQL
+    database_url: str = Field(
+        default="postgresql://tenderspotter:password@localhost:5432/tenderspotter",
+        description="URL de connexion PostgreSQL",
     )
 
     # Cache Configuration
@@ -112,21 +111,14 @@ class Settings(BaseSettings):
         description="Format des logs (json pour production)",
     )
 
-    @field_validator("database_path")
-    @classmethod
-    def resolve_database_path(cls, v: str) -> str:
-        """Résout le chemin relatif de la base de données."""
-        path = Path(v)
-        if not path.is_absolute():
-            # Résoudre par rapport au répertoire du module
-            base_path = Path(__file__).parent.parent.parent.parent
-            path = base_path / v
-        return str(path.resolve())
-
     @property
-    def database_url(self) -> str:
-        """URL SQLAlchemy pour la base de données."""
-        return f"sqlite+aiosqlite:///{self.database_path}"
+    def async_database_url(self) -> str:
+        """URL SQLAlchemy async pour PostgreSQL."""
+        # Convertit postgresql:// en postgresql+asyncpg://
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
 
 
 @lru_cache

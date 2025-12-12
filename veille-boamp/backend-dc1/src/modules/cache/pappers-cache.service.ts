@@ -25,8 +25,8 @@ export class PappersCacheService {
         forceRefresh = false,
     ): Promise<EntrepriseData> {
         if (!forceRefresh) {
-            const cached = this.db.query<{ data: string; fetched_at: string }>(
-                'SELECT data, fetched_at FROM entreprises_cache WHERE siret = ?',
+            const cached = await this.db.query<{ data: string; fetched_at: string }>(
+                'SELECT data, fetched_at FROM entreprises_cache WHERE siret = $1',
                 [siret],
             );
 
@@ -52,11 +52,11 @@ export class PappersCacheService {
         const data = await this.pappersApi.lookupBySiret(siret);
 
         // Sauvegarder en cache
-        this.db.run(
-            `INSERT INTO entreprises_cache (siret, siren, data, fetched_at) 
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT (siret) DO UPDATE SET data = ?, fetched_at = CURRENT_TIMESTAMP`,
-            [siret, siret.substring(0, 9), JSON.stringify(data), JSON.stringify(data)],
+        await this.db.run(
+            `INSERT INTO entreprises_cache (siret, siren, data, fetched_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (siret) DO UPDATE SET data = $3, fetched_at = CURRENT_TIMESTAMP`,
+            [siret, siret.substring(0, 9), JSON.stringify(data)],
         );
 
         return data;
@@ -72,8 +72,8 @@ export class PappersCacheService {
         const normalizedQuery = query.toLowerCase().trim();
 
         if (!forceRefresh) {
-            const cached = this.db.query<{ results: string; fetched_at: string }>(
-                'SELECT results, fetched_at FROM pappers_searches_cache WHERE search_query = ?',
+            const cached = await this.db.query<{ results: string; fetched_at: string }>(
+                'SELECT results, fetched_at FROM pappers_searches_cache WHERE search_query = $1',
                 [normalizedQuery],
             );
 
@@ -92,11 +92,11 @@ export class PappersCacheService {
         const results = await this.pappersApi.searchByName(query);
 
         // Sauvegarder
-        this.db.run(
+        await this.db.run(
             `INSERT INTO pappers_searches_cache (search_query, results, fetched_at)
-       VALUES (?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT (search_query) DO UPDATE SET results = ?, fetched_at = CURRENT_TIMESTAMP`,
-            [normalizedQuery, JSON.stringify(results), JSON.stringify(results)],
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (search_query) DO UPDATE SET results = $2, fetched_at = CURRENT_TIMESTAMP`,
+            [normalizedQuery, JSON.stringify(results)],
         );
 
         return results;
