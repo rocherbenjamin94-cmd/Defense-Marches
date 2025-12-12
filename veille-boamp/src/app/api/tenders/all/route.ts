@@ -3,38 +3,14 @@
 // Fusionne les marchés des deux sources avec déduplication
 
 import { NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
 import { getCachedTenders, setCachedTenders } from '@/lib/cache';
 import { fetchDefenseTendersFromAPI } from '@/lib/boamp';
-import { scrapePlaceMinarm, MarchePlace, MINISTRY_CONFIG } from '@/lib/place';
+import { scrapePlaceMinarm, MarchePlace } from '@/lib/place';
 import { Tender } from '@/lib/types';
+import { getDb, PlaceTenderRow } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes pour scraping PLACE + BOAMP
-
-// Cache Redis pour PLACE
-let redis: Redis | null = null;
-
-function getRedis(): Redis | null {
-    if (redis) return redis;
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) return null;
-    redis = new Redis({ url, token });
-    return redis;
-}
-
-// Cache keys pour les deux ministères
-const PLACE_CACHE_KEY_MINARM = MINISTRY_CONFIG.MINARM.cacheKey;
-const PLACE_CACHE_KEY_MININT = MINISTRY_CONFIG.MININT.cacheKey;
-const PLACE_CACHE_TTL = 7 * 24 * 60 * 60; // 7 jours (cache longue durée, enrichi quotidiennement)
-
-interface CachedPlaceData {
-    marches: MarchePlace[];
-    cachedAt: string;
-    count: number;
-    lastScrapedDate?: string; // Format YYYY-MM-DD
-}
 
 /**
  * Parse une date française (ex: "10 Déc. 2025" ou "10/12/2025")
@@ -150,6 +126,25 @@ function placeToTender(m: MarchePlace): Tender {
 }
 
 /**
+ * Convertit une row PostgreSQL en MarchePlace
+ */
+function rowToMarchePlace(row: PlaceTenderRow): MarchePlace {
+    return {
+        id: row.id,
+        reference: row.reference || undefined,
+        titre: row.titre,
+        acheteur: row.acheteur || undefined,
+        dateLimite: row.date_limite?.toISOString().split('T')[0] || '',
+        datePublication: row.date_publication?.toISOString().split('T')[0] || '',
+        typeProcedure: row.type_procedure || undefined,
+        procedure: row.procedure || undefined,
+        lieu: row.lieu || undefined,
+        url: row.url || '',
+        ministry: (row.ministry as 'MINARM' | 'MININT') || 'MINARM',
+    };
+}
+
+/**
  * Déduplique les marchés entre BOAMP et PLACE
  */
 function deduplicateTenders(boamp: Tender[], place: Tender[]): Tender[] {
@@ -209,37 +204,31 @@ export async function GET(request: Request) {
         let placeMarches: MarchePlace[] = [];
 
         if (includePlace) {
-            console.log('API /tenders/all: Récupération PLACE (MINARM + MININT)...');
-            const client = getRedis();
+            console.log('API /tenders/all: Récupération PLACE depuis PostgreSQL...');
 
-            if (client) {
-                // Charger les deux caches en parallèle
-                const [cachedMinarm, cachedMinint] = await Promise.all([
-                    client.get<CachedPlaceData>(PLACE_CACHE_KEY_MINARM),
-                    client.get<CachedPlaceData>(PLACE_CACHE_KEY_MININT),
-                ]);
+            try {
+                const db = getDb();
 
-                // Fusionner les marchés des deux ministères
-                if (cachedMinarm?.marches) {
-                    placeMarches.push(...cachedMinarm.marches);
-                    console.log(`API /tenders/all: ${cachedMinarm.marches.length} marchés PLACE MINARM en cache`);
+                // Charger tous les marchés PLACE depuis PostgreSQL
+                const rows = await db<PlaceTenderRow[]>`
+                    SELECT * FROM place_tenders
+                    ORDER BY date_publication DESC
+                `;
+
+                if (rows.length > 0) {
+                    placeMarches = rows.map(rowToMarchePlace);
+
+                    // Compter par ministère
+                    const minarmCount = placeMarches.filter(m => m.ministry === 'MINARM').length;
+                    const minintCount = placeMarches.filter(m => m.ministry === 'MININT').length;
+                    console.log(`API /tenders/all: ${minarmCount} marchés PLACE MINARM, ${minintCount} MININT`);
                 }
-                if (cachedMinint?.marches) {
-                    placeMarches.push(...cachedMinint.marches);
-                    console.log(`API /tenders/all: ${cachedMinint.marches.length} marchés PLACE MININT en cache`);
-                }
-
-                // Dédupliquer par ID (au cas où un marché serait dans les deux)
-                const uniqueMarches = Array.from(
-                    new Map(placeMarches.map(m => [m.id, m])).values()
-                );
-                placeMarches = uniqueMarches;
-                console.log(`API /tenders/all: ${placeMarches.length} marchés PLACE total après déduplication`);
+            } catch (dbError) {
+                console.warn('API /tenders/all: Erreur PostgreSQL PLACE:', dbError);
             }
 
-            // Note: Le scraping live est désactivé sur Vercel
-            // Les marchés sont alimentés par les GitHub Actions quotidiennes
-            if (process.env.VERCEL !== '1' && placeMarches.length === 0) {
+            // Fallback: scraping si pas de données en cache (hors environnement Docker/production)
+            if (process.env.NODE_ENV !== 'production' && placeMarches.length === 0) {
                 console.log('API /tenders/all: Tentative de scraping PLACE (cache vide)...');
                 try {
                     const todayMarches = await scrapePlaceMinarm(new Date());

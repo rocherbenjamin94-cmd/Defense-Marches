@@ -2,37 +2,35 @@
 // API Route pour récupérer les marchés depuis la PLACE
 
 import { NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
 import { scrapePlaceMinarm, MarchePlace } from '@/lib/place';
+import { getDb, isCacheValid, updateCacheMetadata, PlaceTenderRow } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes max pour le scraping
 
-// Cache Redis
-let redis: Redis | null = null;
-
-function getRedis(): Redis | null {
-    if (redis) return redis;
-
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!url || !token) {
-        console.warn('PLACE API: Redis non configuré');
-        return null;
-    }
-
-    redis = new Redis({ url, token });
-    return redis;
-}
-
-const CACHE_KEY = 'place:minarm:marches';
-const CACHE_TTL = 2 * 60 * 60; // 2 heures
+const CACHE_KEY = 'place:minarm';
 
 interface CachedPlaceData {
     marches: MarchePlace[];
     cachedAt: string;
     count: number;
+}
+
+// Helper pour convertir une row PostgreSQL en MarchePlace
+function rowToMarchePlace(row: PlaceTenderRow): MarchePlace {
+    return {
+        id: row.id,
+        reference: row.reference || undefined,
+        titre: row.titre,
+        acheteur: row.acheteur || undefined,
+        dateLimite: row.date_limite?.toISOString().split('T')[0] || '',
+        datePublication: row.date_publication?.toISOString().split('T')[0] || '',
+        typeProcedure: row.type_procedure || undefined,
+        procedure: row.procedure || undefined,
+        lieu: row.lieu || undefined,
+        url: row.url || '',
+        ministry: (row.ministry as 'MINARM' | 'MININT') || 'MINARM',
+    };
 }
 
 // GET /api/place - Récupère les marchés PLACE du Ministère des Armées
@@ -41,22 +39,36 @@ export async function GET(request: Request) {
     const forceRefresh = searchParams.get('refresh') === 'true';
 
     try {
-        const client = getRedis();
+        const db = getDb();
 
         // Vérifier le cache si pas de force refresh
-        if (client && !forceRefresh) {
-            const cached = await client.get<CachedPlaceData>(CACHE_KEY);
-            if (cached) {
-                console.log(`PLACE API: Cache hit - ${cached.count} marchés (caché le ${cached.cachedAt})`);
-                return NextResponse.json({
-                    success: true,
-                    source: 'cache',
-                    data: cached.marches,
-                    meta: {
-                        count: cached.count,
-                        cachedAt: cached.cachedAt,
-                    }
-                });
+        if (!forceRefresh) {
+            const valid = await isCacheValid(CACHE_KEY);
+            if (valid) {
+                const rows = await db<PlaceTenderRow[]>`
+                    SELECT * FROM place_tenders
+                    WHERE ministry = 'MINARM'
+                    ORDER BY date_publication DESC
+                `;
+
+                if (rows.length > 0) {
+                    const marches = rows.map(rowToMarchePlace);
+                    const metaRows = await db`
+                        SELECT last_updated FROM cache_metadata WHERE cache_key = ${CACHE_KEY}
+                    `;
+                    const cachedAt = metaRows[0]?.last_updated?.toISOString() || new Date().toISOString();
+
+                    console.log(`PLACE API: Cache PostgreSQL HIT - ${marches.length} marchés (caché le ${cachedAt})`);
+                    return NextResponse.json({
+                        success: true,
+                        source: 'cache',
+                        data: marches,
+                        meta: {
+                            count: marches.length,
+                            cachedAt,
+                        }
+                    });
+                }
             }
         }
 
@@ -64,15 +76,31 @@ export async function GET(request: Request) {
         console.log('PLACE API: Démarrage du scraping...');
         const marches = await scrapePlaceMinarm();
 
-        // Mettre en cache
-        if (client && marches.length > 0) {
-            const cacheData: CachedPlaceData = {
-                marches,
-                cachedAt: new Date().toISOString(),
-                count: marches.length,
-            };
-            await client.set(CACHE_KEY, cacheData, { ex: CACHE_TTL });
-            console.log(`PLACE API: ${marches.length} marchés mis en cache`);
+        // Mettre en cache PostgreSQL
+        if (marches.length > 0) {
+            await db.begin(async (sql) => {
+                // Supprimer les anciens marchés MINARM
+                await sql`DELETE FROM place_tenders WHERE ministry = 'MINARM'`;
+
+                // Insérer les nouveaux
+                for (const m of marches) {
+                    await sql`
+                        INSERT INTO place_tenders (id, reference, titre, acheteur, date_limite, date_publication, type_procedure, procedure, lieu, url, ministry, raw_data)
+                        VALUES (
+                            ${m.id}, ${m.reference || null}, ${m.titre}, ${m.acheteur || null},
+                            ${m.dateLimite || null}, ${m.datePublication || null},
+                            ${m.typeProcedure || null}, ${m.procedure || null}, ${m.lieu || null},
+                            ${m.url}, ${'MINARM'}, ${JSON.stringify(m)}
+                        )
+                        ON CONFLICT (id) DO UPDATE SET
+                            titre = EXCLUDED.titre,
+                            date_limite = EXCLUDED.date_limite,
+                            updated_at = NOW()
+                    `;
+                }
+            });
+            await updateCacheMetadata(CACHE_KEY, marches.length);
+            console.log(`PLACE API: ${marches.length} marchés mis en cache PostgreSQL`);
         }
 
         return NextResponse.json({
