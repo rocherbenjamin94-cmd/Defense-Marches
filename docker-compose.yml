@@ -1,10 +1,10 @@
 # =============================================
 # TenderSpotter - Docker Compose
-# Development & Production Configuration
+# Production Configuration with Traefik (Dokploy)
 # =============================================
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database (internal only)
   postgres:
     image: postgres:16-alpine
     container_name: tenderspotter-db
@@ -15,14 +15,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tenderspotter}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
+    # No ports exposed - internal only
 
   # Frontend - Next.js
   frontend:
@@ -30,15 +31,13 @@ services:
       context: ./veille-boamp
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.tenderspotter.fr}
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     container_name: tenderspotter-frontend
-    ports:
-      - "3000:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${DB_USER:-tenderspotter}:${DB_PASSWORD:-dev_password}@postgres:5432/${DB_NAME:-tenderspotter}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.tenderspotter.fr}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
@@ -46,6 +45,15 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - internal
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN:-tenderspotter.fr}`) || Host(`www.${FRONTEND_DOMAIN:-tenderspotter.fr}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
   # Backend - NestJS
   backend:
@@ -53,19 +61,26 @@ services:
       context: ./veille-boamp/backend-dc1
       dockerfile: Dockerfile
     container_name: tenderspotter-backend
-    ports:
-      - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=postgresql://${DB_USER:-tenderspotter}:${DB_PASSWORD:-dev_password}@postgres:5432/${DB_NAME:-tenderspotter}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://tenderspotter.fr}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - PAPPERS_API_TOKEN=${PAPPERS_API_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - internal
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`${BACKEND_DOMAIN:-api.tenderspotter.fr}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=3001"
 
   # TED API - Python FastAPI
   ted-api:
@@ -73,8 +88,6 @@ services:
       context: ./ted-api-module
       dockerfile: Dockerfile
     container_name: tenderspotter-ted
-    ports:
-      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-tenderspotter}:${DB_PASSWORD:-dev_password}@postgres:5432/${DB_NAME:-tenderspotter}
       - API_HOST=0.0.0.0
@@ -88,11 +101,22 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - internal
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ted-api.rule=Host(`${TED_DOMAIN:-ted.tenderspotter.fr}`)"
+      - "traefik.http.routers.ted-api.entrypoints=websecure"
+      - "traefik.http.routers.ted-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ted-api.loadbalancer.server.port=8000"
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  default:
-    name: tenderspotter-network
+  internal:
+    driver: bridge
+  dokploy-network:
+    external: true
