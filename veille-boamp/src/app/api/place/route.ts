@@ -90,7 +90,7 @@ export async function GET(request: Request) {
                         VALUES (
                             ${m.id}, ${m.reference || null}, ${m.titre}, ${m.acheteur || null},
                             ${m.dateLimite || null}, ${m.datePublication || null},
-                            ${m.typeProcedure || null}, ${m.procedure || null}, ${m.lieu || null},
+                            ${m.type || null}, ${m.procedure || null}, ${m.lieu || null},
                             ${m.url}, ${'MINARM'}, ${JSON.stringify(m)}
                         )
                         ON CONFLICT (id) DO UPDATE SET

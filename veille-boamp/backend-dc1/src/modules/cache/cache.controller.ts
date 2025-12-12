@@ -11,7 +11,7 @@ export class CacheController {
             'SELECT COUNT(*) as count FROM document_analyses',
         );
         const pappersCount = await this.db.query<{ count: number }>(
-            'SELECT COUNT(*) as count FROM entreprises_cache',
+            'SELECT COUNT(*) as count FROM entreprises',
         );
         const searchCount = await this.db.query<{ count: number }>(
             'SELECT COUNT(*) as count FROM pappers_searches_cache',
