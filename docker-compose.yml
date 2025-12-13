@@ -30,7 +30,7 @@ services:
       context: ./veille-boamp
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://tenderspotter-stack-bnfxkr-5b1dba-147-93-90-236.traefik.me}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://147.93.90.236:3001}
         - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     container_name: tenderspotter-frontend
     ports:
@@ -38,7 +38,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${DB_USER:-tenderspotter}:${DB_PASSWORD:-dev_password}@postgres:5432/${DB_NAME:-tenderspotter}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://tenderspotter-stack-bnfxkr-5b1dba-147-93-90-236.traefik.me}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://147.93.90.236:3001}
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
@@ -61,7 +61,7 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=postgresql://${DB_USER:-tenderspotter}:${DB_PASSWORD:-dev_password}@postgres:5432/${DB_NAME:-tenderspotter}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://tenderspotter-stack-bnfxkr-63d6a9-147-93-90-236.traefik.me}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://147.93.90.236:3002}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - PAPPERS_API_TOKEN=${PAPPERS_API_TOKEN}
     depends_on:
